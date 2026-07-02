@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nuvvi-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5174:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+    networks:
+      - nuvvi-network
+
+networks:
+  nuvvi-network:
+    driver: bridge
