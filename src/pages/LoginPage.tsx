@@ -141,14 +141,18 @@ export function LoginPage() {
         <div className="glass rounded-[32px] p-8 md:p-10 space-y-6 shadow-2xl shadow-[#579BE9]/10">
           <div className="text-center space-y-3">
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
-              className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-[#579BE9] to-[#69AAF0] shadow-lg shadow-[#579BE9]/30 flex items-center justify-center"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 180, damping: 14 }}
+              className="flex justify-center"
             >
-              <span className="text-[#0C1E33] font-bold text-xl">N</span>
+              <img
+                src="/logo-favicon-nuvvi.png"
+                alt="Nuvvi"
+                className="h-28 w-28 md:h-32 md:w-32 object-contain drop-shadow-[0_0_20px_rgba(87,155,233,0.4)]"
+              />
             </motion.div>
-            <h1 className="text-2xl font-bold text-gradient">{env.APP_NAME}</h1>
+            <h1 className="text-3xl font-bold uppercase tracking-wider text-gradient mt-1">{env.APP_NAME}</h1>
             <p className="text-sm text-muted">by Hennesy</p>
           </div>
 
