@@ -30,6 +30,21 @@ export function useLogin() {
   });
 }
 
+export function useRegister() {
+  return useMutation({
+    mutationFn: async (userData: {
+      nombres: string;
+      apellidos: string;
+      email: string;
+      tipo_identificacion: string;
+      password: string;
+    }) => {
+      const { data } = await apiClient.post("/auth/register/", userData);
+      return data;
+    },
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
 

@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nuvvi-frontend
+    container_name: nuvvi-frontend-local
     restart: unless-stopped
     env_file:
       - .env

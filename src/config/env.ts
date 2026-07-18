@@ -17,7 +17,7 @@ function getEnvVar(key: string, fallback: string): string {
 export const env = {
   APP_NAME: getEnvVar("VITE_APP_NAME", "Nuvvi"),
   APP_ENV: getEnvVar("VITE_APP_ENV", "development"),
-  API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "http://localhost:8000"),
+  API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "http://localhost:8003"),
   API_PREFIX: getEnvVar("VITE_API_PREFIX", "/api"),
   ENABLE_3D: getEnvVar("VITE_ENABLE_3D", "true") === "true",
 } as const;
