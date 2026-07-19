@@ -41,6 +41,23 @@ export default {
           DEFAULT: "#94a3b8",
           foreground: "#64748b",
         },
+        "nuvvi-public": {
+          primary: "#4F9FF0",
+          "primary-hover": "#348BE3",
+          "primary-dark": "#246FC1",
+          sky: "#A8D7FF",
+          "sky-light": "#D8EEFF",
+          ice: "#EDF8FF",
+          cloud: "#F8FCFF",
+          navy: "#0B2944",
+          heading: "#102F4B",
+          text: "#39566F",
+          muted: "#6C8398",
+          border: "#D9ECFA",
+          success: "#178C68",
+          warning: "#B97812",
+          error: "#C94455",
+        },
       },
       borderRadius: {
         lg: "0.75rem",
@@ -50,6 +67,7 @@ export default {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
+        manrope: ["Manrope", "sans-serif"],
       },
       backdropBlur: {
         xs: "2px",
@@ -60,6 +78,9 @@ export default {
         "float-slow": "float-slow 8s ease-in-out infinite",
         "float-slower": "float-slower 12s ease-in-out infinite",
         "pulse-soft": "pulse-soft 4s ease-in-out infinite",
+        "cloud-drift": "cloud-drift 30s linear infinite",
+        "cloud-drift-slow": "cloud-drift 45s linear infinite",
+        "logo-float": "logo-float 6s ease-in-out infinite",
       },
       keyframes: {
         "glow-pulse": {
@@ -84,6 +105,14 @@ export default {
         "pulse-soft": {
           "0%, 100%": { opacity: "0.2", transform: "scale(1)" },
           "50%": { opacity: "0.5", transform: "scale(1.08)" },
+        },
+        "cloud-drift": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100vw)" },
+        },
+        "logo-float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-5px)" },
         },
       },
     },
