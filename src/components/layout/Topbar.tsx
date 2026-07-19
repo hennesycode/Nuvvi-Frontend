@@ -1,4 +1,5 @@
 import { Menu, Bell, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/hooks/use-auth";
 
@@ -8,6 +9,7 @@ interface TopbarProps {
 
 export function Topbar({ onMenuClick }: TopbarProps) {
   const { logout } = useLogout();
+  const navigate = useNavigate();
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-card-border bg-[#010a07]/80 backdrop-blur-xl px-6">
@@ -28,7 +30,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <Button variant="ghost" size="icon">
           <Bell size={18} />
         </Button>
-        <Button variant="ghost" size="icon" onClick={logout}>
+        <Button variant="ghost" size="icon" onClick={() => { logout(); navigate("/login"); }}>
           <User size={18} />
         </Button>
       </div>

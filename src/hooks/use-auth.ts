@@ -20,11 +20,14 @@ export function useLogin() {
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
       const { data } = await apiClient.post("/auth/token/", credentials);
-      return data;
+      return data as { access: string; refresh: string; user: User };
     },
     onSuccess: (data) => {
       localStorage.setItem("access_token", data.access);
       localStorage.setItem("refresh_token", data.refresh);
+      if (data.user) {
+        queryClient.setQueryData(["auth", "me"], data.user);
+      }
       queryClient.invalidateQueries({ queryKey: ["auth"] });
     },
   });
@@ -53,7 +56,6 @@ export function useLogout() {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       queryClient.clear();
-      window.location.href = "/login";
     },
   };
 }

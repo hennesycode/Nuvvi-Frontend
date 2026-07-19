@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -7,6 +8,10 @@ import { TenantsPage } from "@/pages/TenantsPage";
 import { PlansPage } from "@/pages/PlansPage";
 import { SubscriptionsPage } from "@/pages/SubscriptionsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
+import { ClientsPage } from "@/pages/admin/ClientsPage";
+import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
+import { CreatePasswordPage } from "@/pages/CreatePasswordPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { LegalPlaceholderPage } from "@/pages/LegalPlaceholderPage";
 
@@ -30,9 +35,21 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/crear-contrasena/:token" element={<CreatePasswordPage />} />
       {legalRoutes.map((path) => (
         <Route key={path} path={`/${path}`} element={<LegalPlaceholderPage />} />
       ))}
+      <Route
+        element={
+          <PrivateRoute>
+            <AdminLayout />
+          </PrivateRoute>
+        }
+      >
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/clientes" element={<ClientsPage />} />
+        <Route path="/admin/usuarios" element={<AdminUsersPage />} />
+      </Route>
       <Route
         element={
           <PrivateRoute>

@@ -2,8 +2,23 @@ export interface User {
   id: number;
   email: string;
   full_name: string;
+  first_name?: string;
+  last_name?: string;
+  admin_role?: "superadmin" | "finance" | "support" | "";
+  admin_role_label?: string;
+  identification_type?: string;
+  identification_number?: string;
+  country?: string;
+  department?: string;
+  city?: string;
+  address?: string;
+  phone_country_code?: string;
+  phone_number?: string;
+  last_login?: string | null;
+  invitation_sent_at?: string | null;
   is_active: boolean;
   is_staff: boolean;
+  is_superuser: boolean;
   created_at: string;
   updated_at: string;
 }

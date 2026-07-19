@@ -36,13 +36,11 @@ apiClient.interceptors.response.use(
           }
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return apiClient(originalRequest);
-        } catch (refreshError) {
+        } catch {
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
-          window.location.href = "/login";
+          window.dispatchEvent(new Event("nuvvi:session-expired"));
         }
-      } else {
-        window.location.href = "/login";
       }
     }
 

@@ -64,13 +64,31 @@ export function LoginPage() {
   const onLogin = async (data: LoginForm) => {
     setError("");
     try {
-      await loginMutation.mutateAsync({ email: data.email, password: data.password });
+      const result = await loginMutation.mutateAsync({ email: data.email, password: data.password });
       toast.success("Bienvenido a Nuvvi");
-      navigate("/dashboard");
+      const target = result.user?.is_superuser || result.user?.is_staff
+        ? "/admin/dashboard"
+        : "/dashboard";
+      navigate(target, { replace: true });
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || "Error al iniciar sesión";
-      setError(msg);
-      toast.error(msg);
+      const statusCode = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+
+      if (statusCode === 429) {
+        const seconds = err?.response?.data?.retry_after_seconds || 0;
+        const mins = Math.ceil(seconds / 60);
+        const msg = `Demasiados intentos. Espera ${mins} minuto${mins > 1 ? "s" : ""}.`;
+        setError(msg);
+        toast.error(msg);
+      } else if (statusCode === 401) {
+        const msg = "Usuario o contraseña incorrecto.";
+        setError(msg);
+        toast.error(msg);
+      } else {
+        const msg = detail || "Error al iniciar sesión.";
+        setError(msg);
+        toast.error(msg);
+      }
     }
   };
 
