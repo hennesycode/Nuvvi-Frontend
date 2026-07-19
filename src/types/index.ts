@@ -72,3 +72,25 @@ export interface ApiResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+export interface AuditLog {
+  id: number;
+  action: string;
+  entity: string;
+  entity_id: number | null;
+  status: "success" | "error" | "warning";
+  status_label: string;
+  message: string;
+  error_message: string;
+  request_method: string;
+  request_path: string;
+  ip_address: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  created_at_colombia: string;
+  actor: number | null;
+  actor_name: string;
+  actor_email: string;
+  actor_username: string;
+  actor_identification: string;
+}
