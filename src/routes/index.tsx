@@ -11,6 +11,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
 import { ClientsPage } from "@/pages/admin/ClientsPage";
 import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
+import { AdminProfilePage } from "@/pages/admin/AdminProfilePage";
 import { CreatePasswordPage } from "@/pages/CreatePasswordPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { LegalPlaceholderPage } from "@/pages/LegalPlaceholderPage";
@@ -49,6 +50,7 @@ export function AppRoutes() {
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="/admin/clientes" element={<ClientsPage />} />
         <Route path="/admin/usuarios" element={<AdminUsersPage />} />
+        <Route path="/admin/perfil" element={<AdminProfilePage />} />
       </Route>
       <Route
         element={

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Edit3, Mail, MapPin, Phone, Plus, Search, ShieldCheck, Trash2, UserCog, X } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/api/client";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { cn } from "@/lib/utils";
 import type { ApiResponse, User } from "@/types";
 
@@ -346,9 +347,9 @@ function UserModal({ mode, form, departments, cities, errors, touched, saving, o
   const inputClass = (field: keyof AdminUserForm) => cn("w-full h-11 rounded-xl border bg-white px-3 text-sm text-[#102F4B] outline-none transition-all focus:ring-2 focus:ring-[#4F9FF0]/20", touched[field] && errors[field] ? "border-[#C94455]/60" : "border-[#D9ECFA]");
 
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C1E33]/45 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <motion.div initial={{ opacity: 0, scale: 0.96, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 18 }} transition={{ duration: 0.22 }} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[28px] border border-[#D9ECFA] bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#D9ECFA] bg-white/95 p-6 backdrop-blur">
+    <motion.div className="fixed inset-0 z-50 !mt-0 flex items-center justify-center bg-[#0C1E33]/45 p-2 backdrop-blur-sm sm:p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div initial={{ opacity: 0, scale: 0.96, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 18 }} transition={{ duration: 0.22 }} className="flex max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[22px] border border-[#D9ECFA] bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px]">
+        <div className="flex items-start justify-between gap-3 border-b border-[#D9ECFA] bg-white p-4 sm:gap-4 sm:p-6">
           <div className="flex gap-3">
             <div className="w-11 h-11 rounded-2xl bg-[#E8F0FE] text-[#246FC1] flex items-center justify-center"><UserCog size={22} /></div>
             <div>
@@ -359,10 +360,11 @@ function UserModal({ mode, form, departments, cities, errors, touched, saving, o
           <button onClick={onClose} className="p-2 rounded-xl text-[#6C8398] hover:bg-[#F8FCFF]"><X size={20} /></button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 pb-7 sm:p-6 sm:pb-8">
+          <div className="space-y-6">
           <section>
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-[#6C8398]">Datos personales</h3>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Nombres</span><input value={form.first_name} onChange={(event) => onChange("first_name", event.target.value)} placeholder="Ej: Laura" className={inputClass("first_name")} /><FieldError message={errors.first_name} show={touched.first_name} /></label>
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Apellidos</span><input value={form.last_name} onChange={(event) => onChange("last_name", event.target.value)} placeholder="Ej: Gómez Ríos" className={inputClass("last_name")} /><FieldError message={errors.last_name} show={touched.last_name} /></label>
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Tipo de identificación</span><select value={form.identification_type} onChange={(event) => onChange("identification_type", event.target.value)} className={inputClass("identification_type")}><option value="cc">Cédula de ciudadanía</option><option value="ce">Cédula de extranjería</option><option value="nit">NIT</option><option value="passport">Pasaporte</option></select><FieldError message={errors.identification_type} show={touched.identification_type} /></label>
@@ -372,7 +374,7 @@ function UserModal({ mode, form, departments, cities, errors, touched, saving, o
 
           <section>
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-[#6C8398]">Rol y permisos</h3>
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="grid gap-3 md:grid-cols-3">
               {(Object.keys(roleLabels) as AdminRole[]).map((role) => (
                 <button key={role} type="button" onClick={() => onChange("admin_role", role)} className={cn("rounded-2xl border p-4 text-left transition-all", form.admin_role === role ? "border-[#4F9FF0] bg-[#E8F0FE] shadow-[0_8px_24px_rgba(79,159,240,0.16)]" : "border-[#D9ECFA] hover:bg-[#F8FCFF]")}> 
                   <span className="flex items-center gap-2 text-sm font-bold text-[#102F4B]"><CheckCircle2 size={16} className={form.admin_role === role ? "text-[#178C68]" : "text-[#D9ECFA]"} />{roleLabels[role]}</span>
@@ -384,18 +386,19 @@ function UserModal({ mode, form, departments, cities, errors, touched, saving, o
 
           <section>
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-[#6C8398]">Contacto y ubicación</h3>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Correo electrónico</span><div className="relative"><Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6C8398]" /><input value={form.email} onChange={(event) => onChange("email", event.target.value)} placeholder="nombre@nuvvi.com" className={cn(inputClass("email"), "pl-9")} /></div><FieldError message={errors.email} show={touched.email} /></label>
-              <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Celular</span><div className="flex gap-2"><div className="flex h-11 items-center gap-2 rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]"><span className="text-lg">🇨🇴</span><span>+57</span></div><div className="relative flex-1"><Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6C8398]" /><input value={form.phone_number} onChange={(event) => onChange("phone_number", onlyNumbers(event.target.value, 10))} placeholder="3001234567" inputMode="numeric" maxLength={10} className={cn(inputClass("phone_number"), "pl-9")} /></div></div><FieldError message={errors.phone_number} show={touched.phone_number} /></label>
+              <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Celular</span><div className="flex gap-2"><div className="flex h-11 items-center gap-2 rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]"><span className="block h-4 w-6 overflow-hidden rounded-[3px] border border-[#D9ECFA] shadow-sm" aria-label="Bandera de Colombia"><span className="block h-1/2 bg-[#FCD116]" /><span className="block h-1/4 bg-[#003893]" /><span className="block h-1/4 bg-[#CE1126]" /></span><span>+57</span></div><div className="relative flex-1"><Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6C8398]" /><input value={form.phone_number} onChange={(event) => onChange("phone_number", onlyNumbers(event.target.value, 10))} placeholder="3001234567" inputMode="numeric" maxLength={10} className={cn(inputClass("phone_number"), "pl-9")} /></div></div><FieldError message={errors.phone_number} show={touched.phone_number} /></label>
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">País</span><input value="Colombia" readOnly className="w-full h-11 rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]" /></label>
-              <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Departamento</span><select value={form.department} onChange={(event) => onChange("department", event.target.value)} className={inputClass("department")}><option value="">Selecciona un departamento</option>{departments.map((department) => <option key={department.id} value={department.name}>{department.name}</option>)}</select><FieldError message={errors.department} show={touched.department} /></label>
-              <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Ciudad</span><select value={form.city} onChange={(event) => onChange("city", event.target.value)} disabled={!form.department} className={inputClass("city")}><option value="">Selecciona una ciudad</option>{cities.map((city) => <option key={city} value={city}>{city}</option>)}</select><FieldError message={errors.city} show={touched.city} /></label>
+              <SearchableSelect label="Departamento" value={form.department} placeholder="Selecciona un departamento" options={departments.map((department) => department.name)} error={errors.department} touched={touched.department} onChange={(value) => onChange("department", value)} />
+              <SearchableSelect label="Ciudad" value={form.city} placeholder={form.department ? "Selecciona una ciudad" : "Primero selecciona un departamento"} options={cities} disabled={!form.department} error={errors.city} touched={touched.city} onChange={(value) => onChange("city", value)} />
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Dirección</span><div className="relative"><MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6C8398]" /><input value={form.address} onChange={(event) => onChange("address", event.target.value)} placeholder="Ej: Calle 10 # 20-30" className={cn(inputClass("address"), "pl-9")} /></div><FieldError message={errors.address} show={touched.address} /></label>
             </div>
           </section>
+          </div>
         </div>
 
-        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-[#D9ECFA] bg-white/95 p-5 backdrop-blur sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-3 border-t border-[#D9ECFA] bg-white p-4 sm:flex-row sm:justify-end sm:p-5">
           <button onClick={onClose} className="h-11 rounded-xl border border-[#D9ECFA] px-5 text-sm font-semibold text-[#39566F] hover:bg-[#F8FCFF]">Cancelar</button>
           <Button onClick={onSubmit} disabled={saving} className="h-11 rounded-xl bg-[#4F9FF0] px-5 hover:bg-[#246FC1]">{saving ? "Guardando..." : mode === "create" ? "Crear y enviar invitación" : "Guardar cambios"}</Button>
         </div>
@@ -406,7 +409,7 @@ function UserModal({ mode, form, departments, cities, errors, touched, saving, o
 
 function ConfirmDeleteModal({ user, loading, onClose, onConfirm }: { user: User; loading: boolean; onClose: () => void; onConfirm: () => void }) {
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C1E33]/45 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div className="fixed inset-0 z-50 !mt-0 flex items-center justify-center bg-[#0C1E33]/45 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div initial={{ opacity: 0, scale: 0.94, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 18 }} className="w-full max-w-md rounded-[28px] border border-[#D9ECFA] bg-white p-6 text-center shadow-2xl">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDE8E8] text-[#C94455]"><Trash2 size={26} /></div>
         <h2 className="text-xl font-extrabold text-[#102F4B] font-manrope">¿Eliminar usuario?</h2>
