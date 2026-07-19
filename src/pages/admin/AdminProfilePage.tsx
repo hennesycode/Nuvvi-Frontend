@@ -27,6 +27,7 @@ type ColombiaLocations = {
 type ProfileForm = {
   first_name: string;
   last_name: string;
+  username: string;
   identification_type: string;
   identification_number: string;
   email: string;
@@ -47,6 +48,7 @@ type PasswordForm = {
 const emptyProfile: ProfileForm = {
   first_name: "",
   last_name: "",
+  username: "",
   identification_type: "cc",
   identification_number: "",
   email: "",
@@ -73,6 +75,7 @@ function validateProfile(form: ProfileForm) {
   const errors: Partial<Record<keyof ProfileForm, string>> = {};
   if (form.first_name.trim().length < 2) errors.first_name = "Escribe al menos 2 caracteres.";
   if (form.last_name.trim().length < 2) errors.last_name = "Escribe al menos 2 caracteres.";
+  if (!/^[a-zA-Z0-9._-]{3,}$/.test(form.username.trim())) errors.username = "Mínimo 3 caracteres. Usa letras, números, punto, guion o guion bajo.";
   if (!form.identification_type) errors.identification_type = "Selecciona un tipo.";
   if (!/^\d+$/.test(form.identification_number)) errors.identification_number = "Solo números.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = "Correo inválido.";
@@ -114,6 +117,17 @@ function ColombiaFlag() {
   );
 }
 
+function getApiErrorMessage(error: any, fallback: string) {
+  const data = error?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  const firstField = Object.keys(data)[0];
+  const firstMessage = firstField ? data[firstField] : null;
+  if (Array.isArray(firstMessage)) return firstMessage[0];
+  if (typeof firstMessage === "string") return firstMessage;
+  return fallback;
+}
+
 export function AdminProfilePage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -142,6 +156,7 @@ export function AdminProfilePage() {
     setProfile({
       first_name: user.first_name || user.full_name?.split(" ")[0] || "",
       last_name: user.last_name || user.full_name?.split(" ").slice(1).join(" ") || "",
+      username: user.username || "",
       identification_type: user.identification_type || "cc",
       identification_number: user.identification_number || "",
       email: user.email || "",
@@ -166,8 +181,7 @@ export function AdminProfilePage() {
       toast.success("Perfil actualizado correctamente");
     },
     onError: (error: any) => {
-      const detail = error?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "No se pudo actualizar el perfil. Revisa los campos.");
+      toast.error(getApiErrorMessage(error, "No se pudo actualizar el perfil. Revisa los campos."));
     },
   });
 
@@ -227,7 +241,7 @@ export function AdminProfilePage() {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F0FE] text-base font-bold text-[#246FC1]">{user?.full_name?.charAt(0)?.toUpperCase() || "A"}</div>
           <div>
             <p className="text-sm font-bold text-[#102F4B]">{user?.full_name || "Administrador"}</p>
-            <p className="text-xs text-[#6C8398]">{user?.admin_role_label || "Administrador"}</p>
+            <p className="text-xs text-[#6C8398]">@{user?.username || "sin-usuario"} · {user?.admin_role_label || "Administrador"}</p>
           </div>
         </div>
       </div>
@@ -250,6 +264,7 @@ export function AdminProfilePage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Nombres</span><input value={profile.first_name} onChange={(event) => setProfileField("first_name", event.target.value)} placeholder="Ej: Laura" className={inputClass(profileTouched.first_name && !!profileErrors.first_name)} /><FieldError message={profileErrors.first_name} show={profileTouched.first_name} /></label>
                 <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Apellidos</span><input value={profile.last_name} onChange={(event) => setProfileField("last_name", event.target.value)} placeholder="Ej: Gómez Ríos" className={inputClass(profileTouched.last_name && !!profileErrors.last_name)} /><FieldError message={profileErrors.last_name} show={profileTouched.last_name} /></label>
+                <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Nombre de usuario</span><input value={profile.username} onChange={(event) => setProfileField("username", event.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))} placeholder="Ej: laura.gomez" className={inputClass(profileTouched.username && !!profileErrors.username)} /><FieldError message={profileErrors.username} show={profileTouched.username} /></label>
                 <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Tipo de identificación</span><select value={profile.identification_type} onChange={(event) => setProfileField("identification_type", event.target.value)} className={inputClass(profileTouched.identification_type && !!profileErrors.identification_type)}><option value="cc">Cédula de ciudadanía</option><option value="ce">Cédula de extranjería</option><option value="nit">NIT</option><option value="passport">Pasaporte</option></select><FieldError message={profileErrors.identification_type} show={profileTouched.identification_type} /></label>
                 <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Número de identificación</span><input value={profile.identification_number} onChange={(event) => setProfileField("identification_number", onlyNumbers(event.target.value))} placeholder="Ej: 1020304050" inputMode="numeric" className={inputClass(profileTouched.identification_number && !!profileErrors.identification_number)} /><FieldError message={profileErrors.identification_number} show={profileTouched.identification_number} /></label>
               </div>

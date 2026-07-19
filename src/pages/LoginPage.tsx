@@ -30,7 +30,7 @@ import { env } from "@/config/env";
 import { useLogin, useRegister } from "@/hooks/use-auth";
 
 const loginSchema = z.object({
-  email: z.string().min(1, "Email o usuario requerido"),
+  email: z.string().min(1, "Correo, usuario o identificación requerido"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
 });
 
@@ -211,14 +211,14 @@ export function LoginPage() {
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="text-xs text-muted">Email o usuario</label>
+                  <label className="text-xs text-muted">Correo, usuario o identificación</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                     <input
                       {...loginForm.register("email")}
                       type="text"
                       autoComplete="username"
-                      placeholder="admin@nuvvi.local"
+                      placeholder="admin@nuvvi.local, admin o 1020304050"
                       className={cn(
                         "w-full h-11 pl-10 pr-3 rounded-xl bg-white/5 border text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-[#579BE9]/30 transition-all",
                         loginForm.formState.errors.email ? "border-red-500/50" : "border-card-border"

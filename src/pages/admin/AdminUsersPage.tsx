@@ -27,6 +27,7 @@ type ColombiaLocations = {
 type AdminUserForm = {
   first_name: string;
   last_name: string;
+  username: string;
   admin_role: AdminRole;
   identification_type: string;
   identification_number: string;
@@ -43,6 +44,7 @@ type AdminUserForm = {
 const emptyForm: AdminUserForm = {
   first_name: "",
   last_name: "",
+  username: "",
   admin_role: "support",
   identification_type: "cc",
   identification_number: "",
@@ -77,6 +79,7 @@ function validateForm(form: AdminUserForm) {
   const errors: Partial<Record<keyof AdminUserForm, string>> = {};
   if (form.first_name.trim().length < 2) errors.first_name = "Escribe al menos 2 caracteres.";
   if (form.last_name.trim().length < 2) errors.last_name = "Escribe al menos 2 caracteres.";
+  if (!/^[a-zA-Z0-9._-]{3,}$/.test(form.username.trim())) errors.username = "Mínimo 3 caracteres. Usa letras, números, punto, guion o guion bajo.";
   if (!form.admin_role) errors.admin_role = "Selecciona un rol.";
   if (!form.identification_type) errors.identification_type = "Selecciona un tipo.";
   if (!/^\d+$/.test(form.identification_number)) errors.identification_number = "Solo números.";
@@ -91,6 +94,17 @@ function validateForm(form: AdminUserForm) {
 function onlyNumbers(value: string, maxLength?: number) {
   const cleaned = value.replace(/\D/g, "");
   return maxLength ? cleaned.slice(0, maxLength) : cleaned;
+}
+
+function getApiErrorMessage(error: any, fallback: string) {
+  const data = error?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  const firstField = Object.keys(data)[0];
+  const firstMessage = firstField ? data[firstField] : null;
+  if (Array.isArray(firstMessage)) return firstMessage[0];
+  if (typeof firstMessage === "string") return firstMessage;
+  return fallback;
 }
 
 export function AdminUsersPage() {
@@ -126,7 +140,7 @@ export function AdminUsersPage() {
   const filteredUsers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     if (!normalizedSearch) return usersQuery.data ?? [];
-    return (usersQuery.data ?? []).filter((user) => [user.full_name, user.email, user.admin_role_label, user.identification_number]
+    return (usersQuery.data ?? []).filter((user) => [user.full_name, user.username, user.email, user.admin_role_label, user.identification_number]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(normalizedSearch)));
   }, [search, usersQuery.data]);
@@ -147,8 +161,7 @@ export function AdminUsersPage() {
       closeModal();
     },
     onError: (error: any) => {
-      const detail = error?.response?.data?.detail || "No se pudo guardar el usuario.";
-      toast.error(typeof detail === "string" ? detail : "Revisa los campos del formulario.");
+      toast.error(getApiErrorMessage(error, "No se pudo guardar el usuario. Revisa los campos."));
     },
   });
 
@@ -174,6 +187,7 @@ export function AdminUsersPage() {
     setForm({
       first_name: user.first_name || user.full_name?.split(" ")[0] || "",
       last_name: user.last_name || user.full_name?.split(" ").slice(1).join(" ") || "",
+      username: user.username || "",
       admin_role: (user.admin_role || "superadmin") as AdminRole,
       identification_type: user.identification_type || "cc",
       identification_number: user.identification_number || "",
@@ -258,6 +272,7 @@ export function AdminUsersPage() {
             <thead className="bg-[#F8FCFF] text-xs uppercase tracking-wide text-[#6C8398]">
               <tr>
                 <th className="px-5 py-3 text-left font-bold">Usuario</th>
+                <th className="px-5 py-3 text-left font-bold">Nombre de usuario</th>
                 <th className="px-5 py-3 text-left font-bold">Rol</th>
                 <th className="px-5 py-3 text-left font-bold">Contacto</th>
                 <th className="px-5 py-3 text-left font-bold">Ubicación</th>
@@ -278,6 +293,7 @@ export function AdminUsersPage() {
                       </div>
                     </div>
                   </td>
+                  <td className="px-5 py-4 text-[#39566F]"><span className="font-semibold text-[#102F4B]">@{user.username || "sin-usuario"}</span></td>
                   <td className="px-5 py-4"><span className="inline-flex items-center rounded-full bg-[#E8F0FE] px-3 py-1 text-xs font-bold text-[#246FC1]">{user.admin_role_label || roleLabels[(user.admin_role || "superadmin") as AdminRole]}</span></td>
                   <td className="px-5 py-4 text-[#39566F]"><p>{user.email}</p><p className="text-xs text-[#6C8398]">+57 {user.phone_number || ""}</p></td>
                   <td className="px-5 py-4 text-[#39566F]"><p>{user.city || "-"}</p><p className="text-xs text-[#6C8398]">{user.department || "Colombia"}</p></td>
@@ -292,7 +308,7 @@ export function AdminUsersPage() {
                 </tr>
               ))}
               {!usersQuery.isLoading && filteredUsers.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-[#6C8398]">No hay usuarios administrativos para mostrar.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-[#6C8398]">No hay usuarios administrativos para mostrar.</td></tr>
               )}
             </tbody>
           </table>
@@ -367,6 +383,7 @@ function UserModal({ mode, form, departments, cities, errors, touched, saving, o
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Nombres</span><input value={form.first_name} onChange={(event) => onChange("first_name", event.target.value)} placeholder="Ej: Laura" className={inputClass("first_name")} /><FieldError message={errors.first_name} show={touched.first_name} /></label>
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Apellidos</span><input value={form.last_name} onChange={(event) => onChange("last_name", event.target.value)} placeholder="Ej: Gómez Ríos" className={inputClass("last_name")} /><FieldError message={errors.last_name} show={touched.last_name} /></label>
+              <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Nombre de usuario</span><input value={form.username} onChange={(event) => onChange("username", event.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))} placeholder="Ej: laura.gomez" className={inputClass("username")} /><FieldError message={errors.username} show={touched.username} /></label>
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Tipo de identificación</span><select value={form.identification_type} onChange={(event) => onChange("identification_type", event.target.value)} className={inputClass("identification_type")}><option value="cc">Cédula de ciudadanía</option><option value="ce">Cédula de extranjería</option><option value="nit">NIT</option><option value="passport">Pasaporte</option></select><FieldError message={errors.identification_type} show={touched.identification_type} /></label>
               <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Número de identificación</span><input value={form.identification_number} onChange={(event) => onChange("identification_number", onlyNumbers(event.target.value))} placeholder="Ej: 1020304050" inputMode="numeric" className={inputClass("identification_number")} /><FieldError message={errors.identification_number} show={touched.identification_number} /></label>
             </div>
