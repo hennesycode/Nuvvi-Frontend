@@ -94,3 +94,43 @@ export interface AuditLog {
   actor_username: string;
   actor_identification: string;
 }
+
+export interface MatiasConnection {
+  id: number;
+  name: string;
+  environment: "sandbox" | "production";
+  environment_label: string;
+  base_url: string;
+  default_base_url: string;
+  enabled: boolean;
+  timeout_seconds: number;
+  retry_attempts: number;
+  auth_method: string;
+  token_preview: string;
+  token_external_id: string;
+  token_name: string;
+  token_expires_at: string | null;
+  account_email: string;
+  parent_company_uuid: string;
+  external_company_id: string;
+  external_company_name: string;
+  external_company_nit: string;
+  account_main_email: string;
+  linked_companies_count: number;
+  connection_status: string;
+  operational_status: string;
+  environment_detected: string;
+  multicompany_verified: boolean;
+  last_test_at: string | null;
+  last_success_at: string | null;
+  last_error_at: string | null;
+  last_error_code: string;
+  last_error_message: string;
+  last_response_time_ms: number | null;
+  last_test_results: Array<{ label: string; status: "success" | "error" | "warning"; detail: string }>;
+  catalogs_status: string;
+  catalogs_synced_count: number;
+  catalogs_total_count: number;
+  catalogs_last_synced_at: string | null;
+  catalogs_detail: Array<{ endpoint: string; name: string; records: number | null; status: string; last_synced_at: string; error: string }>;
+}

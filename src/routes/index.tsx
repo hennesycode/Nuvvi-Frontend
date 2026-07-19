@@ -13,6 +13,7 @@ import { ClientsPage } from "@/pages/admin/ClientsPage";
 import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
 import { AdminProfilePage } from "@/pages/admin/AdminProfilePage";
 import { AdminActivityPage } from "@/pages/admin/AdminActivityPage";
+import { ProviderConnectionPage } from "@/pages/admin/ProviderConnectionPage";
 import { CreatePasswordPage } from "@/pages/CreatePasswordPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { LegalPlaceholderPage } from "@/pages/LegalPlaceholderPage";
@@ -52,6 +53,7 @@ export function AppRoutes() {
         <Route path="/admin/clientes" element={<ClientsPage />} />
         <Route path="/admin/usuarios" element={<AdminUsersPage />} />
         <Route path="/admin/perfil" element={<AdminProfilePage />} />
+        <Route path="/admin/conexion-proveedor" element={<ProviderConnectionPage />} />
         <Route path="/admin/actividad" element={<AdminActivityPage />} />
       </Route>
       <Route
