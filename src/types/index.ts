@@ -139,7 +139,7 @@ export interface MatiasConnection {
   last_error_code: string;
   last_error_message: string;
   last_response_time_ms: number | null;
-  last_test_results: Array<{ label: string; endpoint?: string; http_status?: number | null; response_time_ms?: number | null; status: "success" | "error" | "warning"; detail: string }>;
+  last_test_results: Array<{ label: string; endpoint?: string; http_status?: number | null; response_time_ms?: number | null; status: "success" | "error" | "warning"; detail: string; json_keys?: string[]; payload_sanitized?: unknown }>;
   catalogs_status: string;
   catalogs_synced_count: number;
   catalogs_total_count: number;
