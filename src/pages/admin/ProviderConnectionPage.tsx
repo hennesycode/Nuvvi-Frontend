@@ -30,6 +30,14 @@ type FormState = {
   parent_company_uuid: string;
 };
 
+type ConfirmConfig = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone?: "danger" | "info";
+  onConfirm: () => void;
+};
+
 const emptyForm: FormState = {
   enabled: false,
   environment: "sandbox",
@@ -89,6 +97,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">{label}</span>{children}</label>;
 }
 
+function ConfirmDialog({ config, onClose }: { config: ConfirmConfig; onClose: () => void }) {
+  const danger = config.tone === "danger";
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#102F4B]/35 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl border border-[#D9ECFA] bg-white p-5 shadow-2xl"><div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-extrabold text-[#102F4B] font-manrope">{config.title}</h2><button onClick={onClose} className="rounded-xl p-2 text-[#6C8398] hover:bg-[#F8FCFF]">×</button></div><div className={cn("rounded-2xl p-4 text-sm font-semibold", danger ? "bg-[#FDE8E8] text-[#C94455]" : "bg-[#E8F0FE] text-[#246FC1]")}>{config.message}</div><div className="mt-6 flex justify-end gap-2"><Button variant="outline" onClick={onClose} className="rounded-xl border-[#D9ECFA] bg-white text-[#39566F]">Cancelar</Button><Button onClick={() => { config.onConfirm(); onClose(); }} className={cn("rounded-xl", danger && "bg-[#C94455] hover:bg-[#A83342]")}>{config.confirmLabel}</Button></div></div></div>;
+}
+
 const inputClass = "h-11 w-full rounded-xl border border-[#D9ECFA] bg-white px-3 text-sm text-[#102F4B] outline-none transition-all focus:ring-2 focus:ring-[#4F9FF0]/20";
 
 export function ProviderConnectionPage() {
@@ -98,6 +111,7 @@ export function ProviderConnectionPage() {
   const [newToken, setNewToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null);
   const [generateForm, setGenerateForm] = useState({ email: "", password: "", token_name: "Integracion Nuvvi Sandbox", description: "Token principal del servidor de facturacion", expires_in_days: 90 });
 
   const connectionQuery = useQuery({
@@ -185,10 +199,19 @@ export function ProviderConnectionPage() {
   const hasValidPat = !!connection && connection.token_preview !== "Sin configurar" && (!connection.token_expires_at || new Date(connection.token_expires_at).getTime() > Date.now());
 
   const changeEnvironment = (environment: "sandbox" | "production") => {
-    if (environment !== form.environment && form.environment === "production" && !window.confirm("Vas a cambiar de Producción a Sandbox. Confirma que entiendes el impacto operativo.")) return;
-    if (environment !== form.environment && environment === "production" && !window.confirm("Producción tiene efectos reales. ¿Deseas continuar?")) return;
-    setSelectedEnvironment(environment);
-    setForm((current) => ({ ...current, environment, base_url: defaultUrls[environment], token_generation_endpoint: defaultTokenEndpoints[environment] }));
+    const applyChange = () => {
+      setSelectedEnvironment(environment);
+      setForm((current) => ({ ...current, environment, base_url: defaultUrls[environment], token_generation_endpoint: defaultTokenEndpoints[environment] }));
+    };
+    if (environment !== form.environment && form.environment === "production") {
+      setConfirmConfig({ title: "Cambiar a Sandbox", message: "Vas a cambiar de Producción a Sandbox. Confirma que entiendes el impacto operativo antes de continuar.", confirmLabel: "Cambiar a Sandbox", tone: "info", onConfirm: applyChange });
+      return;
+    }
+    if (environment !== form.environment && environment === "production") {
+      setConfirmConfig({ title: "Cambiar a Producción", message: "Producción tiene efectos reales en MATIAS. Confirma que deseas operar con credenciales y endpoints productivos.", confirmLabel: "Cambiar a Producción", tone: "danger", onConfirm: applyChange });
+      return;
+    }
+    applyChange();
   };
 
   return (
@@ -249,7 +272,7 @@ export function ProviderConnectionPage() {
           <Section title="3. Autenticación">
             <div className="grid gap-4 md:grid-cols-2"><Field label="Método"><input readOnly value="Personal Access Token — PAT" className="h-11 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]" /></Field><Field label="Correo de la cuenta"><input value={form.account_email} onChange={(e) => setForm((c) => ({ ...c, account_email: e.target.value }))} className={inputClass} /></Field><Field label="Nombre del token"><input value={form.token_name} onChange={(e) => setForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /></Field><Field label="ID externo del token"><div className="min-h-11 break-all whitespace-normal rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 py-2 text-sm font-semibold text-[#102F4B]">{connection?.token_external_id || "Devuelto por MATIAS"}</div></Field><Field label="Fecha de expiración"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{tokenExpiryLabel(connection?.token_expires_at)}</div></Field><Field label="Token actual"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_preview || "Sin configurar"}</div></Field></div>
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"><input type={showToken ? "text" : "password"} value={newToken} onChange={(e) => setNewToken(e.target.value)} placeholder="Pegar PAT existente para validarlo" className={inputClass} /><div className="flex gap-2"><button onClick={() => setShowToken((v) => !v)} className="h-11 rounded-xl border border-[#D9ECFA] px-4 text-[#39566F]">{showToken ? <EyeOff size={16} /> : <Eye size={16} />}</button><Button onClick={() => tokenMutation.mutate()} disabled={!newToken || busy} className="h-11 rounded-xl">Validar y reemplazar PAT</Button></div></div>
-            <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" onClick={() => generateMutation.mutate()} disabled={busy || !generateForm.email || !generateForm.password} className="h-10 rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]"><RefreshCw size={15} className="mr-2" />Rotar PAT</Button><Button variant="outline" onClick={() => window.confirm("Esta acción revoca el PAT actual en MATIAS y detiene las operaciones autenticadas. ¿Deseas continuar?") && revokeMutation.mutate()} disabled={busy || !connection?.token_external_id} className="h-10 rounded-xl border-[#F4B8C0] bg-white text-[#C94455] hover:bg-[#FDE8E8]"><Trash2 size={15} className="mr-2" />Revocar PAT actual</Button></div>
+            <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" onClick={() => generateMutation.mutate()} disabled={busy || !generateForm.email || !generateForm.password} className="h-10 rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]"><RefreshCw size={15} className="mr-2" />Rotar PAT</Button><Button variant="outline" onClick={() => setConfirmConfig({ title: "Revocar PAT actual", message: "Esta acción revoca el PAT actual en MATIAS y detiene las operaciones autenticadas hasta configurar un nuevo token válido.", confirmLabel: "Revocar PAT", tone: "danger", onConfirm: () => revokeMutation.mutate() })} disabled={busy || !connection?.token_external_id} className="h-10 rounded-xl border-[#F4B8C0] bg-white text-[#C94455] hover:bg-[#FDE8E8]"><Trash2 size={15} className="mr-2" />Revocar PAT actual</Button></div>
           </Section>
 
           <Section title="4. Cuenta principal">
@@ -269,6 +292,7 @@ export function ProviderConnectionPage() {
         </aside>
       </div>
 
+      {confirmConfig && <ConfirmDialog config={confirmConfig} onClose={() => setConfirmConfig(null)} />}
       {busy && <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl bg-[#102F4B] px-4 py-3 text-sm font-semibold text-white shadow-2xl"><Loader2 size={16} className="animate-spin" />Procesando acción MATIAS...</div>}
     </motion.div>
   );
