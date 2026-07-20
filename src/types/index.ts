@@ -111,6 +111,9 @@ export interface MatiasConnection {
   token_external_id: string;
   token_name: string;
   token_expires_at: string | null;
+  token_created_at: string | null;
+  authenticated_user_id: string;
+  authenticated_user_email: string;
   account_email: string;
   parent_company_uuid: string;
   external_company_id: string;
@@ -118,6 +121,14 @@ export interface MatiasConnection {
   external_company_nit: string;
   account_main_email: string;
   linked_companies_count: number;
+  external_company_status: string;
+  membership_plan: string;
+  membership_status: string;
+  membership_expires_at: string | null;
+  membership_documents_available: number | null;
+  membership_documents_consumed: number | null;
+  membership_company_limit: number | null;
+  membership_summary: Record<string, unknown>;
   connection_status: string;
   operational_status: string;
   environment_detected: string;
@@ -128,10 +139,11 @@ export interface MatiasConnection {
   last_error_code: string;
   last_error_message: string;
   last_response_time_ms: number | null;
-  last_test_results: Array<{ label: string; status: "success" | "error" | "warning"; detail: string }>;
+  last_test_results: Array<{ label: string; endpoint?: string; http_status?: number | null; response_time_ms?: number | null; status: "success" | "error" | "warning"; detail: string }>;
   catalogs_status: string;
   catalogs_synced_count: number;
   catalogs_total_count: number;
+  catalogs_last_attempt_at: string | null;
   catalogs_last_synced_at: string | null;
-  catalogs_detail: Array<{ endpoint: string; name: string; records: number | null; status: string; last_synced_at: string; error: string }>;
+  catalogs_detail: Array<{ endpoint: string; name: string; records: number | null; status: string; last_attempt_at?: string; last_synced_at: string; http_status?: number | null; response_time_ms?: number | null; error: string }>;
 }
