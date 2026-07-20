@@ -279,7 +279,7 @@ export function ClientsPage() {
   const createMutation = useMutation({
     mutationFn: async () => (await apiClient.post<Company>("/admin/companies/", createPayload)).data,
     onSuccess: (company) => { toast.success("Empresa creada y sincronización MATIAS ejecutada"); queryClient.invalidateQueries({ queryKey: ["companies"] }); queryClient.invalidateQueries({ queryKey: ["company-provider-status"] }); setCreating(false); setSelected(company); setForm(emptyForm(environment)); setFormStep(1); },
-    onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudo crear la empresa.")),
+    onError: (error: any) => { queryClient.invalidateQueries({ queryKey: ["companies"] }); toast.error(getApiErrorMessage(error, "No se pudo crear la empresa.")); },
   });
 
   const updateMutation = useMutation({
