@@ -14,7 +14,7 @@ const defaultUrls = {
 };
 
 const defaultTokenEndpoints = {
-  sandbox: "/auth/token",
+  sandbox: "/tokens",
   production: "/tokens",
 };
 
@@ -49,7 +49,7 @@ function formatDate(value?: string | null) {
 
 function statusStyle(status: string) {
   if (["CONNECTED", "READY_TO_REGISTER_COMPANIES", "synced"].includes(status)) return "bg-[#D8F5EB] text-[#178C68]";
-  if (["DISABLED", "NOT_CONFIGURED", "TESTING", "INACTIVE", "PAT_REQUIRED", "PAT_VALID", "MULTICOMPANY_VERIFIED", "CATALOGS_PENDING", "CATALOGS_PARTIAL", "DISCONNECTED", "pending", "partial", "CATALOGS_NOT_SYNCHRONIZED"].includes(status)) return "bg-[#FFF3E0] text-[#B97812]";
+  if (["DISABLED", "NOT_CONFIGURED", "TESTING", "INACTIVE", "PAT_REQUIRED", "PAT_ENDPOINT_NOT_FOUND", "PAT_VALID", "MULTICOMPANY_VERIFIED", "CATALOGS_PENDING", "CATALOGS_PARTIAL", "DISCONNECTED", "pending", "partial", "CATALOGS_NOT_SYNCHRONIZED"].includes(status)) return "bg-[#FFF3E0] text-[#B97812]";
   return "bg-[#FDE8E8] text-[#C94455]";
 }
 
