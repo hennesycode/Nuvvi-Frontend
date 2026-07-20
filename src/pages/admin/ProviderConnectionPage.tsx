@@ -50,6 +50,17 @@ function statusStyle(status: string) {
   return "bg-[#FDE8E8] text-[#C94455]";
 }
 
+function getApiErrorMessage(error: any, fallback: string) {
+  const data = error?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  const firstField = Object.keys(data)[0];
+  const firstMessage = firstField ? data[firstField] : null;
+  if (Array.isArray(firstMessage)) return firstMessage[0];
+  if (typeof firstMessage === "string") return firstMessage;
+  return fallback;
+}
+
 function StatusPill({ value }: { value: string }) {
   return <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusStyle(value))}>{value}</span>;
 }
@@ -113,11 +124,11 @@ export function ProviderConnectionPage() {
       }
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, testAfter) => {
       queryClient.setQueryData(["matias-connection"], data);
-      toast.success("Configuración MATIAS guardada");
+      toast.success(testAfter ? "Configuración guardada y prueba ejecutada correctamente" : "Configuración MATIAS guardada correctamente");
     },
-    onError: (error: any) => toast.error(error?.response?.data?.detail || "No se pudo guardar la configuración."),
+    onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudo guardar la configuración MATIAS.")),
   });
 
   const tokenMutation = useMutation({
@@ -128,27 +139,27 @@ export function ProviderConnectionPage() {
     onSuccess: (data) => {
       queryClient.setQueryData(["matias-connection"], data);
       setNewToken("");
-      toast.success("PAT guardado cifrado");
+      toast.success("PAT guardado cifrado correctamente");
     },
-    onError: () => toast.error("No se pudo guardar el PAT."),
+    onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudo guardar el PAT de MATIAS.")),
   });
 
   const testMutation = useMutation({
     mutationFn: async () => (await apiClient.post<MatiasConnection>("/matias/test/")).data,
-    onSuccess: (data) => { queryClient.setQueryData(["matias-connection"], data); toast.success("Prueba de conexión finalizada"); },
-    onError: () => toast.error("No se pudo probar la conexión."),
+    onSuccess: (data) => { queryClient.setQueryData(["matias-connection"], data); toast.success("Prueba de conexión finalizada y registrada en actividad"); },
+    onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudo probar la conexión MATIAS.")),
   });
 
   const syncMutation = useMutation({
     mutationFn: async () => (await apiClient.post<MatiasConnection>("/matias/sync-catalogs/")).data,
-    onSuccess: (data) => { queryClient.setQueryData(["matias-connection"], data); toast.success("Sincronización de catálogos finalizada"); },
-    onError: () => toast.error("No se pudieron sincronizar catálogos."),
+    onSuccess: (data) => { queryClient.setQueryData(["matias-connection"], data); toast.success("Sincronización de catálogos finalizada y registrada en actividad"); },
+    onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudieron sincronizar los catálogos MATIAS.")),
   });
 
   const generateMutation = useMutation({
     mutationFn: async () => (await apiClient.post<MatiasConnection>("/matias/generate-pat/", generateForm)).data,
-    onSuccess: (data) => { queryClient.setQueryData(["matias-connection"], data); setGenerateForm((current) => ({ ...current, password: "" })); toast.success("PAT generado y guardado cifrado"); },
-    onError: (error: any) => toast.error(error?.response?.data?.detail || "No se pudo generar el PAT."),
+    onSuccess: (data) => { queryClient.setQueryData(["matias-connection"], data); setGenerateForm((current) => ({ ...current, password: "" })); toast.success("PAT generado y guardado cifrado correctamente"); },
+    onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudo generar el PAT de MATIAS.")),
   });
 
   const canAct = !!connection && !connectionQuery.isLoading;
