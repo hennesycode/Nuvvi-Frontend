@@ -104,6 +104,10 @@ function StatusPill({ value, label }: { value?: string; label?: string }) {
   return <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusStyle(value))}>{label || value || "Sin estado"}</span>;
 }
 
+function ColombiaFlag() {
+  return <span className="block h-4 w-6 overflow-hidden rounded-[3px] border border-[#D9ECFA] shadow-sm" aria-label="Bandera de Colombia"><span className="block h-1/2 bg-[#FCD116]" /><span className="block h-1/4 bg-[#003893]" /><span className="block h-1/4 bg-[#CE1126]" /></span>;
+}
+
 function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="space-y-1.5">
@@ -210,10 +214,6 @@ export function ClientsPage() {
 
   const catalogs = catalogsQuery.data || { countries: [], departments: [], cities: [], identity_documents: [], organization_types: [], accounting_regimes: [], fiscal_regimes: [] };
   const colombia = useMemo(() => catalogs.countries.find((country) => optionName(country).toLowerCase() === "colombia" || String(country.abbreviation_A2 || "").toUpperCase() === "CO"), [catalogs.countries]);
-  const nitDocument = useMemo(() => catalogs.identity_documents.find((item) => String(item.abbreviation || "").toUpperCase() === "NIT" || String(item.code || "") === "31"), [catalogs.identity_documents]);
-  const legalPerson = useMemo(() => catalogs.organization_types.find((item) => optionName(item).toLowerCase().includes("jurídica") || optionName(item).toLowerCase().includes("juridica")), [catalogs.organization_types]);
-  const noVat = useMemo(() => catalogs.accounting_regimes.find((item) => String(item.code || "") === "49"), [catalogs.accounting_regimes]);
-  const noApply = useMemo(() => catalogs.fiscal_regimes.find((item) => String(item.code || "") === "R-99-PN"), [catalogs.fiscal_regimes]);
   const selectedCountry = catalogs.countries.find((item) => optionId(item) === form.country_id);
   const selectedIdentityDocument = catalogs.identity_documents.find((item) => optionId(item) === form.identity_document_id);
   const selectedDepartment = catalogs.departments.find((item) => optionId(item) === form.department_id);
@@ -254,12 +254,8 @@ export function ClientsPage() {
     setForm((current) => ({
       ...current,
       country_id: current.country_id || (colombia ? optionId(colombia) : ""),
-      identity_document_id: current.identity_document_id || (nitDocument ? optionId(nitDocument) : ""),
-      organization_type_id: current.organization_type_id || (legalPerson ? optionId(legalPerson) : ""),
-      accounting_regime_id: current.accounting_regime_id || (noVat ? optionId(noVat) : ""),
-      fiscal_regime_id: current.fiscal_regime_id || (noApply ? optionId(noApply) : ""),
     }));
-  }, [colombia, form.accounting_regime_id, form.country_id, form.fiscal_regime_id, form.identity_document_id, form.organization_type_id, legalPerson, nitDocument, noApply, noVat]);
+  }, [colombia, form.country_id]);
 
   useEffect(() => {
     const calculated = isNitIdentification ? calculateNitDv(form.nit) : "";
@@ -331,7 +327,7 @@ export function ClientsPage() {
           {formStep === 1 && (
             <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Razón social" hint="Nombre legal exacto que se usará para crear la subcuenta en MATIAS." error={form.company_name && !fieldChecks.companyName ? "Escribe al menos 3 caracteres." : undefined}>
+                <Field label="Razón social" error={form.company_name && !fieldChecks.companyName ? "Escribe al menos 3 caracteres." : undefined}>
                   <input value={form.company_name} onChange={(e) => setForm((c) => ({ ...c, company_name: e.target.value }))} className={inputClass} placeholder="EMPRESA DEMO SAS" />
                 </Field>
                 <SearchableObjectSelect id="identity" label="Tipo de identificación" value={form.identity_document_id} options={catalogs.identity_documents} placeholder="Seleccionar tipo" openSelect={openSelect} setOpenSelect={setOpenSelect} onChange={(value) => setForm((c) => ({ ...c, identity_document_id: value }))} />
@@ -342,7 +338,7 @@ export function ClientsPage() {
                   <input readOnly value={form.verification_digit} className={cn(inputClass, "bg-[#F8FCFF] font-bold text-[#102F4B]")} placeholder={isNitIdentification ? "Se calcula al escribir la identificación" : "No aplica"} />
                 </Field>
                 <Field label="País" hint="Colombia queda fijo para facturación electrónica nacional.">
-                  <div className="flex h-11 items-center justify-between rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]"><span>🇨🇴 Colombia</span><span className="text-xs text-[#6C8398]">Fijo</span></div>
+                  <div className="flex h-11 items-center justify-between rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]"><span className="flex items-center gap-2"><ColombiaFlag />Colombia</span><span className="text-xs text-[#6C8398]">Fijo</span></div>
                 </Field>
                 <SearchableObjectSelect id="department" label="Departamento" value={form.department_id} options={catalogs.departments} placeholder="Seleccionar departamento" openSelect={openSelect} setOpenSelect={setOpenSelect} onChange={(value) => setForm((c) => ({ ...c, department_id: value, city_id: "" }))} />
                 <SearchableObjectSelect id="city" label="Ciudad" value={form.city_id} options={filteredCities} placeholder={form.department_id ? "Seleccionar ciudad" : "Selecciona primero departamento"} disabled={!form.department_id} openSelect={openSelect} setOpenSelect={setOpenSelect} onChange={(value) => setForm((c) => ({ ...c, city_id: value }))} />
@@ -353,10 +349,10 @@ export function ClientsPage() {
                   <input value={form.address} onChange={(e) => setForm((c) => ({ ...c, address: e.target.value }))} className={inputClass} placeholder="Calle 123 #45-67" />
                 </Field>
                 <Field label="Celular" hint="Número colombiano de 10 dígitos.">
-                  <div className="flex h-11 overflow-hidden rounded-xl border border-[#D9ECFA] bg-white focus-within:ring-2 focus-within:ring-[#4F9FF0]/20"><span className="flex items-center gap-2 border-r border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]">🇨🇴 +57</span><input inputMode="numeric" value={mobileDigits} onChange={(e) => setForm((c) => ({ ...c, mobile: `+57${onlyNumbers(e.target.value, 10)}` }))} className="min-w-0 flex-1 px-3 text-sm text-[#102F4B] outline-none" placeholder="3001234567" /></div>
+                  <div className="flex h-11 overflow-hidden rounded-xl border border-[#D9ECFA] bg-white focus-within:ring-2 focus-within:ring-[#4F9FF0]/20"><span className="flex items-center gap-2 border-r border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]"><ColombiaFlag />+57</span><input inputMode="numeric" value={mobileDigits} onChange={(e) => setForm((c) => ({ ...c, mobile: `+57${onlyNumbers(e.target.value, 10)}` }))} className="min-w-0 flex-1 px-3 text-sm text-[#102F4B] outline-none" placeholder="3001234567" /></div>
                 </Field>
                 <Field label="Teléfono fijo o alternativo" hint="MATIAS lo admite en el JSON oficial; usa +57 y 10 dígitos.">
-                  <div className="flex h-11 overflow-hidden rounded-xl border border-[#D9ECFA] bg-white focus-within:ring-2 focus-within:ring-[#4F9FF0]/20"><span className="flex items-center gap-2 border-r border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]">🇨🇴 +57</span><input inputMode="numeric" value={phoneDigits} onChange={(e) => setForm((c) => ({ ...c, phone: `+57${onlyNumbers(e.target.value, 10)}` }))} className="min-w-0 flex-1 px-3 text-sm text-[#102F4B] outline-none" placeholder="6011234567" /></div>
+                  <div className="flex h-11 overflow-hidden rounded-xl border border-[#D9ECFA] bg-white focus-within:ring-2 focus-within:ring-[#4F9FF0]/20"><span className="flex items-center gap-2 border-r border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]"><ColombiaFlag />+57</span><input inputMode="numeric" value={phoneDigits} onChange={(e) => setForm((c) => ({ ...c, phone: `+57${onlyNumbers(e.target.value, 10)}` }))} className="min-w-0 flex-1 px-3 text-sm text-[#102F4B] outline-none" placeholder="6011234567" /></div>
                 </Field>
               </div>
               <LiveChecks checks={fieldChecks} />
@@ -379,7 +375,7 @@ export function ClientsPage() {
 
           {formStep === 3 && (
             <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-              <div className="grid gap-3 md:grid-cols-2"><Info label="Empresa" value={form.company_name} /><Info label="Tipo identificación" value={optionLabel(selectedIdentityDocument)} /><Info label="Identificación" value={form.nit} /><Info label="DV calculado" value={form.verification_digit || "No aplica"} /><Info label="Tipo contribuyente" value={optionLabel(selectedOrganizationType)} /><Info label="Régimen contable" value={optionLabel(selectedAccountingRegime)} /><Info label="Responsabilidad" value={optionLabel(selectedFiscalRegime)} /><Info label="País" value="🇨🇴 Colombia" /><Info label="Departamento" value={optionLabel(selectedDepartment)} /><Info label="Ciudad" value={optionLabel(selectedCity)} /><Info label="Dirección" value={form.address} /><Info label="Celular" value={form.mobile} /><Info label="Teléfono" value={form.phone} /><Info label="Responsable" value={`${form.first_name} ${form.last_name}`} /><Info label="Correo" value={form.email} /><Info label="Ambiente" value={environment === "sandbox" ? "Sandbox" : "Producción"} /></div>
+              <div className="grid gap-3 md:grid-cols-2"><Info label="Empresa" value={form.company_name} /><Info label="Tipo identificación" value={optionLabel(selectedIdentityDocument)} /><Info label="Identificación" value={form.nit} /><Info label="DV calculado" value={form.verification_digit || "No aplica"} /><Info label="Tipo contribuyente" value={optionLabel(selectedOrganizationType)} /><Info label="Régimen contable" value={optionLabel(selectedAccountingRegime)} /><Info label="Responsabilidad" value={optionLabel(selectedFiscalRegime)} /><Info label="País" value={<span className="flex items-center gap-2"><ColombiaFlag />Colombia</span>} /><Info label="Departamento" value={optionLabel(selectedDepartment)} /><Info label="Ciudad" value={optionLabel(selectedCity)} /><Info label="Dirección" value={form.address} /><Info label="Celular" value={form.mobile} /><Info label="Teléfono" value={form.phone} /><Info label="Responsable" value={`${form.first_name} ${form.last_name}`} /><Info label="Correo" value={form.email} /><Info label="Ambiente" value={environment === "sandbox" ? "Sandbox" : "Producción"} /></div>
               <LiveChecks checks={fieldChecks} />
             </div>
           )}
