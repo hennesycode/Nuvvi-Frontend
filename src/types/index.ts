@@ -105,6 +105,7 @@ export interface MatiasConnection {
   enabled: boolean;
   timeout_seconds: number;
   retry_attempts: number;
+  token_generation_endpoint: string;
   auth_method: string;
   token_preview: string;
   token_external_id: string;

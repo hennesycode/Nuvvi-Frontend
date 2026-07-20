@@ -19,10 +19,9 @@ type FormState = {
   base_url: string;
   timeout_seconds: number;
   retry_attempts: number;
+  token_generation_endpoint: string;
   account_email: string;
   token_name: string;
-  token_external_id: string;
-  token_expires_at: string;
   parent_company_uuid: string;
 };
 
@@ -32,10 +31,9 @@ const emptyForm: FormState = {
   base_url: defaultUrls.sandbox,
   timeout_seconds: 20,
   retry_attempts: 2,
+  token_generation_endpoint: "/tokens",
   account_email: "",
   token_name: "",
-  token_external_id: "",
-  token_expires_at: "",
   parent_company_uuid: "",
 };
 
@@ -46,7 +44,7 @@ function formatDate(value?: string | null) {
 
 function statusStyle(status: string) {
   if (["CONNECTED", "READY_TO_REGISTER_COMPANIES", "synced"].includes(status)) return "bg-[#D8F5EB] text-[#178C68]";
-  if (["DISCONNECTED", "pending", "CATALOGS_NOT_SYNCHRONIZED"].includes(status)) return "bg-[#FFF3E0] text-[#B97812]";
+  if (["DISABLED", "NOT_CONFIGURED", "INACTIVE", "PAT_REQUIRED", "DISCONNECTED", "pending", "CATALOGS_NOT_SYNCHRONIZED"].includes(status)) return "bg-[#FFF3E0] text-[#B97812]";
   return "bg-[#FDE8E8] text-[#C94455]";
 }
 
@@ -106,18 +104,16 @@ export function ProviderConnectionPage() {
       base_url: connection.base_url,
       timeout_seconds: connection.timeout_seconds,
       retry_attempts: connection.retry_attempts,
+      token_generation_endpoint: connection.token_generation_endpoint || "/tokens",
       account_email: connection.account_email || "",
       token_name: connection.token_name || "",
-      token_external_id: connection.token_external_id || "",
-      token_expires_at: connection.token_expires_at ? connection.token_expires_at.slice(0, 16) : "",
       parent_company_uuid: connection.parent_company_uuid || "",
     });
   }, [connection]);
 
   const saveMutation = useMutation<MatiasConnection, unknown, boolean>({
     mutationFn: async (testAfter = false) => {
-      const payload = { ...form, token_expires_at: form.token_expires_at ? new Date(form.token_expires_at).toISOString() : null };
-      const { data } = await apiClient.put<MatiasConnection>("/matias/connection/", payload);
+      const { data } = await apiClient.put<MatiasConnection>("/matias/connection/", form);
       if (testAfter) {
         const tested = await apiClient.post<MatiasConnection>("/matias/test/");
         return tested.data;
@@ -133,7 +129,7 @@ export function ProviderConnectionPage() {
 
   const tokenMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await apiClient.post<MatiasConnection>("/matias/token/", { access_token: newToken, token_name: form.token_name, token_external_id: form.token_external_id, token_expires_at: form.token_expires_at ? new Date(form.token_expires_at).toISOString() : null, account_email: form.account_email });
+      const { data } = await apiClient.post<MatiasConnection>("/matias/token/", { access_token: newToken, token_name: form.token_name, account_email: form.account_email });
       return data;
     },
     onSuccess: (data) => {
@@ -177,7 +173,7 @@ export function ProviderConnectionPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-[#102F4B] font-manrope">Conexión proveedor</h1>
-          <p className="mt-1 text-sm text-[#6C8398]">Configuración segura de MATIAS API para facturación y multiempresa.</p>
+          <p className="mt-1 text-sm text-[#6C8398]">MATIAS se valida con solicitudes HTTP usando Authorization: Bearer PAT; no mantiene una conexión permanente.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => saveMutation.mutate(true)} disabled={!canAct || busy} className="h-11 rounded-xl bg-[#4F9FF0] hover:bg-[#246FC1]"><Save size={16} className="mr-2" />Guardar y probar</Button>
@@ -206,7 +202,7 @@ export function ProviderConnectionPage() {
           <Info label="NIT" value={connection?.external_company_nit || "-"} />
           <Info label="UUID empresa principal" value={connection?.parent_company_uuid ? `${connection.parent_company_uuid.slice(0, 8)}-****-****` : "-"} />
           <Info label="Permiso multiempresa" value={connection?.multicompany_verified ? "Verificado" : "Pendiente"} />
-          <Info label="Catálogos" value={`${connection?.catalogs_synced_count || 0}/${connection?.catalogs_total_count || 17} sincronizados`} />
+          <Info label="Catálogos" value={`${connection?.catalogs_synced_count || 0}/${connection?.catalogs_total_count || 18} sincronizados`} />
           <Info label="Tiempo respuesta" value={connection?.last_response_time_ms ? `${connection.last_response_time_ms} ms` : "-"} />
         </div>
       </section>
@@ -225,11 +221,12 @@ export function ProviderConnectionPage() {
               <div className="flex items-end"><button onClick={() => setForm((c) => ({ ...c, base_url: defaultUrls[c.environment] }))} className="h-11 rounded-xl border border-[#D9ECFA] px-4 text-sm font-semibold text-[#39566F] hover:bg-[#F8FCFF]"><RotateCcw size={15} className="mr-2 inline" />Restablecer URL predeterminada</button></div>
               <Field label="Tiempo máximo de espera (segundos)"><input type="number" min={5} max={120} value={form.timeout_seconds} onChange={(e) => setForm((c) => ({ ...c, timeout_seconds: Number(e.target.value) }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Tiempo límite de cada petición a MATIAS. Ejemplo: 20 segundos.</p></Field>
               <Field label="Reintentos automáticos"><input type="number" min={0} max={5} value={form.retry_attempts} onChange={(e) => setForm((c) => ({ ...c, retry_attempts: Number(e.target.value) }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Cantidad de nuevos intentos ante errores temporales o timeout.</p></Field>
+              <Field label="Endpoint creación PAT"><input value={form.token_generation_endpoint} onChange={(e) => setForm((c) => ({ ...c, token_generation_endpoint: e.target.value }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Default /tokens. Solo se intenta /auth/token si /tokens devuelve 404.</p></Field>
             </div>
           </Section>
 
           <Section title="3. Autenticación">
-            <div className="grid gap-4 md:grid-cols-2"><Field label="Método"><input readOnly value="Personal Access Token — PAT" className="h-11 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]" /></Field><Field label="Correo de la cuenta"><input value={form.account_email} onChange={(e) => setForm((c) => ({ ...c, account_email: e.target.value }))} className={inputClass} /></Field><Field label="Nombre del token"><input value={form.token_name} onChange={(e) => setForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /></Field><Field label="ID externo del token"><input value={form.token_external_id} onChange={(e) => setForm((c) => ({ ...c, token_external_id: e.target.value }))} className={inputClass} /></Field><Field label="Fecha de expiración"><input type="datetime-local" value={form.token_expires_at} onChange={(e) => setForm((c) => ({ ...c, token_expires_at: e.target.value }))} className={inputClass} /></Field><Field label="Token actual"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_preview || "Sin configurar"}</div></Field></div>
+            <div className="grid gap-4 md:grid-cols-2"><Field label="Método"><input readOnly value="Personal Access Token — PAT" className="h-11 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]" /></Field><Field label="Correo de la cuenta"><input value={form.account_email} onChange={(e) => setForm((c) => ({ ...c, account_email: e.target.value }))} className={inputClass} /></Field><Field label="Nombre del token"><input value={form.token_name} onChange={(e) => setForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /></Field><Field label="ID externo del token"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_external_id || "Devuelto por MATIAS"}</div></Field><Field label="Fecha de expiración"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_expires_at ? formatDate(connection.token_expires_at) : "Devuelta por MATIAS"}</div></Field><Field label="Token actual"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_preview || "Sin configurar"}</div></Field></div>
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"><input type={showToken ? "text" : "password"} value={newToken} onChange={(e) => setNewToken(e.target.value)} placeholder="Pegar o reemplazar PAT existente" className={inputClass} /><div className="flex gap-2"><button onClick={() => setShowToken((v) => !v)} className="h-11 rounded-xl border border-[#D9ECFA] px-4 text-[#39566F]">{showToken ? <EyeOff size={16} /> : <Eye size={16} />}</button><Button onClick={() => tokenMutation.mutate()} disabled={!newToken || busy} className="h-11 rounded-xl">Reemplazar PAT</Button></div></div>
           </Section>
 
@@ -242,7 +239,7 @@ export function ProviderConnectionPage() {
         <aside className="space-y-6">
           <Section title="Generar token MATIAS"><div className="space-y-3"><input placeholder="Correo" value={generateForm.email} onChange={(e) => setGenerateForm((c) => ({ ...c, email: e.target.value }))} className={inputClass} /><input type="password" placeholder="Contraseña temporal (no se guarda)" value={generateForm.password} onChange={(e) => setGenerateForm((c) => ({ ...c, password: e.target.value }))} className={inputClass} /><input placeholder="Nombre del token" value={generateForm.token_name} onChange={(e) => setGenerateForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /><input placeholder="Descripción" value={generateForm.description} onChange={(e) => setGenerateForm((c) => ({ ...c, description: e.target.value }))} className={inputClass} /><input type="number" min={1} max={365} value={generateForm.expires_in_days} onChange={(e) => setGenerateForm((c) => ({ ...c, expires_in_days: Number(e.target.value) }))} className={inputClass} /><Button onClick={() => generateMutation.mutate()} disabled={busy || !generateForm.email || !generateForm.password} className="h-11 w-full rounded-xl"><KeyRound size={16} className="mr-2" />Iniciar sesión y generar token</Button></div></Section>
 
-          <Section title="5. Sincronización de catálogos"><div className="space-y-3"><div className="rounded-2xl bg-[#F8FCFF] p-4"><p className="text-sm font-bold text-[#102F4B]">Catálogos: {connection?.catalogs_synced_count || 0}/{connection?.catalogs_total_count || 17} sincronizados</p><p className="mt-1 text-xs text-[#6C8398]">Última carga: {formatDate(connection?.catalogs_last_synced_at)}</p></div><Button onClick={() => syncMutation.mutate()} disabled={busy} className="h-11 w-full rounded-xl"><RefreshCw size={16} className="mr-2" />Sincronizar ahora</Button><div className="max-h-72 overflow-y-auto rounded-2xl border border-[#D9ECFA]">{(connection?.catalogs_detail || []).map((item) => <div key={item.endpoint} className="flex items-center justify-between gap-3 border-b border-[#EEF6FC] px-3 py-2 last:border-0"><div><p className="text-sm font-semibold text-[#102F4B]">{item.name}</p><p className="text-xs text-[#6C8398]">{item.records ?? "—"} registros</p></div><StatusPill value={item.status === "Sincronizado" ? "synced" : "error"} /></div>)}</div></div></Section>
+          <Section title="5. Sincronización de catálogos"><div className="space-y-3"><div className="rounded-2xl bg-[#F8FCFF] p-4"><p className="text-sm font-bold text-[#102F4B]">Catálogos: {connection?.catalogs_synced_count || 0}/{connection?.catalogs_total_count || 18} sincronizados</p><p className="mt-1 text-xs text-[#6C8398]">Los catálogos DIAN de MATIAS son públicos y no requieren PAT. Última carga: {formatDate(connection?.catalogs_last_synced_at)}</p></div><Button onClick={() => syncMutation.mutate()} disabled={busy} className="h-11 w-full rounded-xl"><RefreshCw size={16} className="mr-2" />Sincronizar ahora</Button><div className="max-h-72 overflow-y-auto rounded-2xl border border-[#D9ECFA]">{(connection?.catalogs_detail || []).map((item) => <div key={item.endpoint} className="flex items-center justify-between gap-3 border-b border-[#EEF6FC] px-3 py-2 last:border-0"><div><p className="text-sm font-semibold text-[#102F4B]">{item.name}</p><p className="text-xs text-[#6C8398]">{item.records ?? "—"} registros</p></div><StatusPill value={item.status === "Sincronizado" ? "synced" : "error"} /></div>)}</div></div></Section>
 
           <Section title="6. Diagnóstico y registros"><div className="space-y-3"><Info label="Última prueba" value={formatDate(connection?.last_test_at)} /><Info label="Último error" value={connection?.last_error_message || "Ninguno"} /><Info label="Ambiente detectado" value={connection?.environment_detected || "-"} /><Button variant="outline" onClick={() => setShowDiagnostics((v) => !v)} className="h-11 w-full rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]">{showDiagnostics ? "Ocultar diagnóstico" : "Ver diagnóstico"}</Button>{showDiagnostics && <div className="space-y-2">{testResults.map((result) => <div key={result.label} className="rounded-xl border border-[#D9ECFA] p-3"><div className="flex items-center gap-2">{result.status === "success" ? <CheckCircle2 className="text-[#178C68]" size={16} /> : result.status === "warning" ? <AlertTriangle className="text-[#B97812]" size={16} /> : <XCircle className="text-[#C94455]" size={16} />}<p className="text-sm font-bold text-[#102F4B]">{result.label}</p></div><p className="mt-1 text-xs text-[#6C8398]">{result.detail}</p></div>)}</div>}</div></Section>
         </aside>
