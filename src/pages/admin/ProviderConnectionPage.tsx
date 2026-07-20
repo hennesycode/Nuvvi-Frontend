@@ -13,6 +13,11 @@ const defaultUrls = {
   production: "",
 };
 
+const defaultTokenEndpoints = {
+  sandbox: "/auth/token",
+  production: "/tokens",
+};
+
 type FormState = {
   enabled: boolean;
   environment: "sandbox" | "production";
@@ -31,7 +36,7 @@ const emptyForm: FormState = {
   base_url: defaultUrls.sandbox,
   timeout_seconds: 20,
   retry_attempts: 2,
-  token_generation_endpoint: "/tokens",
+  token_generation_endpoint: defaultTokenEndpoints.sandbox,
   account_email: "",
   token_name: "",
   parent_company_uuid: "",
@@ -113,7 +118,7 @@ export function ProviderConnectionPage() {
       base_url: connection.base_url,
       timeout_seconds: connection.timeout_seconds,
       retry_attempts: connection.retry_attempts,
-      token_generation_endpoint: connection.token_generation_endpoint || "/tokens",
+      token_generation_endpoint: connection.token_generation_endpoint || defaultTokenEndpoints[connection.environment],
       account_email: connection.account_email || "",
       token_name: connection.token_name || "",
       parent_company_uuid: connection.parent_company_uuid || "",
@@ -181,7 +186,7 @@ export function ProviderConnectionPage() {
     if (environment !== form.environment && form.environment === "production" && !window.confirm("Vas a cambiar de Producción a Sandbox. Confirma que entiendes el impacto operativo.")) return;
     if (environment !== form.environment && environment === "production" && !window.confirm("Producción tiene efectos reales. ¿Deseas continuar?")) return;
     setSelectedEnvironment(environment);
-    setForm((current) => ({ ...current, environment, base_url: defaultUrls[environment] }));
+    setForm((current) => ({ ...current, environment, base_url: defaultUrls[environment], token_generation_endpoint: defaultTokenEndpoints[environment] }));
   };
 
   return (
@@ -237,7 +242,6 @@ export function ProviderConnectionPage() {
               <div className="flex items-end"><button onClick={() => setForm((c) => ({ ...c, base_url: defaultUrls[c.environment] }))} className="h-11 rounded-xl border border-[#D9ECFA] px-4 text-sm font-semibold text-[#39566F] hover:bg-[#F8FCFF]"><RotateCcw size={15} className="mr-2 inline" />Restablecer URL predeterminada</button></div>
               <Field label="Tiempo máximo de espera (segundos)"><input type="number" min={5} max={120} value={form.timeout_seconds} onChange={(e) => setForm((c) => ({ ...c, timeout_seconds: Number(e.target.value) }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Tiempo límite de cada petición a MATIAS. Ejemplo: 20 segundos.</p></Field>
               <Field label="Reintentos automáticos"><input type="number" min={0} max={5} value={form.retry_attempts} onChange={(e) => setForm((c) => ({ ...c, retry_attempts: Number(e.target.value) }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Cantidad de nuevos intentos ante errores temporales o timeout.</p></Field>
-              <Field label="Endpoint creación PAT"><input value={form.token_generation_endpoint} onChange={(e) => setForm((c) => ({ ...c, token_generation_endpoint: e.target.value }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Default /tokens. Solo se intenta /auth/token si /tokens devuelve 404.</p></Field>
             </div>
           </Section>
 
