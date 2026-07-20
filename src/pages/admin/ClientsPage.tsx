@@ -149,7 +149,7 @@ function SearchableObjectSelect({ id, label, value, options, placeholder, disabl
         {open && (
           <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-2xl border border-[#D9ECFA] bg-white shadow-[0_18px_45px_rgba(16,47,75,0.16)]">
             <div className="border-b border-[#EEF6FC] p-2">
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por código o nombre..." className="h-10 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm outline-none" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por código o nombre..." className="h-10 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm text-[#102F4B] outline-none placeholder:text-[#8EA3B5]" />
             </div>
             <div className="max-h-56 overflow-y-auto p-1">
               {filtered.map((item) => (
@@ -363,11 +363,12 @@ export function ClientsPage() {
 
           {formStep === 2 && (
             <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid content-start gap-4 self-start md:grid-cols-2">
                 <Field label="Nombres del responsable" hint="Nombres del usuario propietario o administrador inicial." error={form.first_name && form.first_name.trim().length < 2 ? "Escribe al menos 2 caracteres." : undefined}><input value={form.first_name} onChange={(e) => setForm((c) => ({ ...c, first_name: e.target.value }))} className={inputClass} placeholder="Ej: Laura" /></Field>
                 <Field label="Apellidos del responsable" hint="Apellidos del usuario propietario." error={form.last_name && form.last_name.trim().length < 2 ? "Escribe al menos 2 caracteres." : undefined}><input value={form.last_name} onChange={(e) => setForm((c) => ({ ...c, last_name: e.target.value }))} className={inputClass} placeholder="Ej: Ramirez" /></Field>
-                <Field label="Correo de acceso" hint="Correo con el que la empresa podrá iniciar sesión en NUVVI y MATIAS." error={form.email && !fieldChecks.email ? existingEmail ? "Ya existe una empresa con este correo." : "Correo inválido." : undefined}><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} className={inputClass} placeholder="administracion@empresademo.com" /></Field>
-                <div />
+                <div className="md:col-span-2">
+                  <Field label="Correo de acceso" hint="Correo con el que la empresa podrá iniciar sesión en NUVVI y MATIAS." error={form.email && !fieldChecks.email ? existingEmail ? "Ya existe una empresa con este correo." : "Correo inválido." : undefined}><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} className={inputClass} placeholder="administracion@empresademo.com" /></Field>
+                </div>
                 <Field label="Contraseña temporal" hint="Se usará para crear el usuario Empresa en NUVVI y la subcuenta en MATIAS."><input type="password" value={form.password} onChange={(e) => setForm((c) => ({ ...c, password: e.target.value }))} className={inputClass} placeholder="ClaveTemporalSegura2026!" /></Field>
                 <Field label="Confirmar contraseña" hint="Debe coincidir exactamente con la contraseña temporal." error={form.password_confirmation && form.password !== form.password_confirmation ? "Las contraseñas no coinciden." : undefined}><input type="password" value={form.password_confirmation} onChange={(e) => setForm((c) => ({ ...c, password_confirmation: e.target.value }))} className={inputClass} placeholder="ClaveTemporalSegura2026!" /></Field>
               </div>
