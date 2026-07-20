@@ -221,7 +221,9 @@ export function ClientsPage() {
   const selectedOrganizationType = catalogs.organization_types.find((item) => optionId(item) === form.organization_type_id);
   const selectedAccountingRegime = catalogs.accounting_regimes.find((item) => optionId(item) === form.accounting_regime_id);
   const selectedFiscalRegime = catalogs.fiscal_regimes.find((item) => optionId(item) === form.fiscal_regime_id);
-  const isNitIdentification = String(selectedIdentityDocument?.abbreviation || "").toUpperCase() === "NIT" || String(selectedIdentityDocument?.code || "") === "31";
+  const documentAbbreviation = String(selectedIdentityDocument?.abbreviation || "").toUpperCase();
+  const documentCode = String(selectedIdentityDocument?.code || "");
+  const requiresVerificationDigit = ["NIT", "CC"].includes(documentAbbreviation) || ["31", "13"].includes(documentCode);
   const filteredCities = catalogs.cities.filter((city) => !form.department_id || cityDepartmentId(city) === form.department_id);
   const mobileDigits = form.mobile.replace(/^\+57/, "").replace(/\D/g, "").slice(0, 10);
   const phoneDigits = form.phone.replace(/^\+57/, "").replace(/\D/g, "").slice(0, 10);
@@ -258,9 +260,9 @@ export function ClientsPage() {
   }, [colombia, form.country_id]);
 
   useEffect(() => {
-    const calculated = isNitIdentification ? calculateNitDv(form.nit) : "";
+    const calculated = requiresVerificationDigit ? calculateNitDv(form.nit) : "";
     if (form.verification_digit !== calculated) setForm((current) => ({ ...current, verification_digit: calculated }));
-  }, [form.nit, form.verification_digit, isNitIdentification]);
+  }, [form.nit, form.verification_digit, requiresVerificationDigit]);
 
   const createPayload = {
     ...form,
@@ -334,8 +336,8 @@ export function ClientsPage() {
                 <Field label="Identificación" hint="Número fiscal o documento; se enviará a MATIAS como dni." error={form.nit && !fieldChecks.nit ? existingNit ? "Ya existe una empresa con esta identificación." : "Escribe solo números, entre 5 y 15 dígitos." : undefined}>
                   <input inputMode="numeric" value={form.nit} onChange={(e) => setForm((c) => ({ ...c, nit: onlyNumbers(e.target.value, 15) }))} className={inputClass} placeholder="Ej: 901999991" />
                 </Field>
-                <Field label="Dígito de verificación" hint={isNitIdentification ? "Calculado automáticamente con el algoritmo oficial DIAN. Solo se guarda localmente." : "No aplica para este tipo de identificación."}>
-                  <input readOnly value={form.verification_digit} className={cn(inputClass, "bg-[#F8FCFF] font-bold text-[#102F4B]")} placeholder={isNitIdentification ? "Se calcula al escribir la identificación" : "No aplica"} />
+                <Field label="Dígito de verificación" hint={requiresVerificationDigit ? "Calculado automáticamente para NIT o cédula. Solo se guarda localmente." : "No aplica para este tipo de identificación."}>
+                  <input readOnly value={form.verification_digit} className={cn(inputClass, "bg-[#F8FCFF] font-bold text-[#102F4B]")} placeholder={requiresVerificationDigit ? "Se calcula al escribir la identificación" : "No aplica"} />
                 </Field>
                 <Field label="País" hint="Colombia queda fijo para facturación electrónica nacional.">
                   <div className="flex h-11 items-center justify-between rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]"><span className="flex items-center gap-2"><ColombiaFlag />Colombia</span><span className="text-xs text-[#6C8398]">Fijo</span></div>
