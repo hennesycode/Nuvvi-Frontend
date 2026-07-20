@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 const sidebarItems = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/admin/usuarios", icon: UserCog, label: "Usuarios", superadminOnly: true },
-  { to: "/admin/clientes", icon: Users, label: "Clientes" },
+  { to: "/admin/empresas", icon: Users, label: "Empresas" },
   { to: "/admin/conexion-proveedor", icon: PlugZap, label: "Conexión proveedor", superadminOnly: true },
   { to: "/admin/actividad", icon: Activity, label: "Actividad" },
 ];

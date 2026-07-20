@@ -50,7 +50,8 @@ export function AppRoutes() {
         }
       >
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/clientes" element={<ClientsPage />} />
+        <Route path="/admin/clientes" element={<Navigate to="/admin/empresas" replace />} />
+        <Route path="/admin/empresas" element={<ClientsPage />} />
         <Route path="/admin/usuarios" element={<AdminUsersPage />} />
         <Route path="/admin/perfil" element={<AdminProfilePage />} />
         <Route path="/admin/conexion-proveedor" element={<ProviderConnectionPage />} />

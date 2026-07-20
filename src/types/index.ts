@@ -147,3 +147,63 @@ export interface MatiasConnection {
   catalogs_last_synced_at: string | null;
   catalogs_detail: Array<{ endpoint: string; name: string; records: number | null; status: string; last_attempt_at?: string; last_synced_at: string; http_status?: number | null; response_time_ms?: number | null; error: string }>;
 }
+
+export interface CompanyProviderLink {
+  id: number;
+  provider: string;
+  environment: "sandbox" | "production";
+  parent_company_uuid: string;
+  matias_company_id: string;
+  matias_client_uuid: string;
+  remote_name: string;
+  remote_nit: string;
+  remote_email: string;
+  provider_status: string;
+  provider_status_label: string;
+  enabled_in_provider: boolean;
+  last_sync_at: string | null;
+  last_success_at: string | null;
+  last_error_code: string;
+  last_error_message: string;
+  last_remote_snapshot: Record<string, unknown>;
+}
+
+export interface CompanySyncAttempt {
+  id: number;
+  operation: string;
+  request_identifier: string | null;
+  http_method: string;
+  endpoint: string;
+  http_status: number | null;
+  successful: boolean;
+  error_code: string;
+  error_message: string;
+  response_time_ms: number | null;
+  created_at: string;
+}
+
+export interface Company {
+  id: string;
+  legal_name: string;
+  nit: string;
+  email: string;
+  owner_first_name: string;
+  owner_last_name: string;
+  country_id: string;
+  department_id: string;
+  city_id: string;
+  address: string;
+  mobile: string;
+  phone: string;
+  notes: string;
+  assigned_executive: string;
+  local_status: string;
+  local_status_label: string;
+  onboarding_status: string;
+  onboarding_status_label: string;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  provider_link: CompanyProviderLink | null;
+  recent_attempts: CompanySyncAttempt[];
+}
