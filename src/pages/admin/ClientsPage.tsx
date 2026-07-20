@@ -80,6 +80,16 @@ function onlyNumbers(value: string, maxLength?: number) {
   return maxLength ? cleaned.slice(0, maxLength) : cleaned;
 }
 
+function calculateNitDv(value: string) {
+  const number = onlyNumbers(value, 15);
+  if (!number || number.length > 15) return "";
+  const weights = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3];
+  const padded = number.padStart(15, "0");
+  const total = padded.split("").reduce((sum, digit, index) => sum + Number(digit) * weights[index], 0);
+  const remainder = total % 11;
+  return String(remainder === 0 || remainder === 1 ? remainder : 11 - remainder);
+}
+
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -211,6 +221,7 @@ export function ClientsPage() {
   const selectedOrganizationType = catalogs.organization_types.find((item) => optionId(item) === form.organization_type_id);
   const selectedAccountingRegime = catalogs.accounting_regimes.find((item) => optionId(item) === form.accounting_regime_id);
   const selectedFiscalRegime = catalogs.fiscal_regimes.find((item) => optionId(item) === form.fiscal_regime_id);
+  const isNitIdentification = String(selectedIdentityDocument?.abbreviation || "").toUpperCase() === "NIT" || String(selectedIdentityDocument?.code || "") === "31";
   const filteredCities = catalogs.cities.filter((city) => !form.department_id || cityDepartmentId(city) === form.department_id);
   const mobileDigits = form.mobile.replace(/^\+57/, "").replace(/\D/g, "").slice(0, 10);
   const phoneDigits = form.phone.replace(/^\+57/, "").replace(/\D/g, "").slice(0, 10);
@@ -240,12 +251,20 @@ export function ClientsPage() {
   const busy = companiesQuery.isLoading || catalogsQuery.isLoading;
 
   useEffect(() => {
-    if (!form.country_id && colombia) setForm((current) => ({ ...current, country_id: optionId(colombia) }));
-    if (!form.identity_document_id && nitDocument) setForm((current) => ({ ...current, identity_document_id: optionId(nitDocument) }));
-    if (!form.organization_type_id && legalPerson) setForm((current) => ({ ...current, organization_type_id: optionId(legalPerson) }));
-    if (!form.accounting_regime_id && noVat) setForm((current) => ({ ...current, accounting_regime_id: optionId(noVat) }));
-    if (!form.fiscal_regime_id && noApply) setForm((current) => ({ ...current, fiscal_regime_id: optionId(noApply) }));
+    setForm((current) => ({
+      ...current,
+      country_id: current.country_id || (colombia ? optionId(colombia) : ""),
+      identity_document_id: current.identity_document_id || (nitDocument ? optionId(nitDocument) : ""),
+      organization_type_id: current.organization_type_id || (legalPerson ? optionId(legalPerson) : ""),
+      accounting_regime_id: current.accounting_regime_id || (noVat ? optionId(noVat) : ""),
+      fiscal_regime_id: current.fiscal_regime_id || (noApply ? optionId(noApply) : ""),
+    }));
   }, [colombia, form.accounting_regime_id, form.country_id, form.fiscal_regime_id, form.identity_document_id, form.organization_type_id, legalPerson, nitDocument, noApply, noVat]);
+
+  useEffect(() => {
+    const calculated = isNitIdentification ? calculateNitDv(form.nit) : "";
+    if (form.verification_digit !== calculated) setForm((current) => ({ ...current, verification_digit: calculated }));
+  }, [form.nit, form.verification_digit, isNitIdentification]);
 
   const createPayload = {
     ...form,
@@ -319,11 +338,11 @@ export function ClientsPage() {
                 <Field label="Identificación" hint="Número fiscal o documento; se enviará a MATIAS como dni." error={form.nit && !fieldChecks.nit ? existingNit ? "Ya existe una empresa con esta identificación." : "Escribe solo números, entre 5 y 15 dígitos." : undefined}>
                   <input inputMode="numeric" value={form.nit} onChange={(e) => setForm((c) => ({ ...c, nit: onlyNumbers(e.target.value, 15) }))} className={inputClass} placeholder="Ej: 901999991" />
                 </Field>
-                <Field label="Dígito de verificación" hint="Opcional. Se guarda localmente; no se envía al endpoint de creación MATIAS." error={form.verification_digit && !fieldChecks.verificationDigit ? "Debe ser un solo número." : undefined}>
-                  <input inputMode="numeric" value={form.verification_digit} onChange={(e) => setForm((c) => ({ ...c, verification_digit: onlyNumbers(e.target.value, 1) }))} className={inputClass} placeholder="Ej: 2" />
+                <Field label="Dígito de verificación" hint={isNitIdentification ? "Calculado automáticamente con el algoritmo oficial DIAN. Solo se guarda localmente." : "No aplica para este tipo de identificación."}>
+                  <input readOnly value={form.verification_digit} className={cn(inputClass, "bg-[#F8FCFF] font-bold text-[#102F4B]")} placeholder={isNitIdentification ? "Se calcula al escribir la identificación" : "No aplica"} />
                 </Field>
                 <Field label="País" hint="Colombia queda fijo para facturación electrónica nacional.">
-                  <div className="flex h-11 items-center justify-between rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]"><span>🇨🇴 {selectedCountry ? optionLabel(selectedCountry) : "Cargando Colombia..."}</span><span className="text-xs text-[#6C8398]">Fijo</span></div>
+                  <div className="flex h-11 items-center justify-between rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]"><span>🇨🇴 Colombia</span><span className="text-xs text-[#6C8398]">Fijo</span></div>
                 </Field>
                 <SearchableObjectSelect id="department" label="Departamento" value={form.department_id} options={catalogs.departments} placeholder="Seleccionar departamento" openSelect={openSelect} setOpenSelect={setOpenSelect} onChange={(value) => setForm((c) => ({ ...c, department_id: value, city_id: "" }))} />
                 <SearchableObjectSelect id="city" label="Ciudad" value={form.city_id} options={filteredCities} placeholder={form.department_id ? "Seleccionar ciudad" : "Selecciona primero departamento"} disabled={!form.department_id} openSelect={openSelect} setOpenSelect={setOpenSelect} onChange={(value) => setForm((c) => ({ ...c, city_id: value }))} />
@@ -360,7 +379,7 @@ export function ClientsPage() {
 
           {formStep === 3 && (
             <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-              <div className="grid gap-3 md:grid-cols-2"><Info label="Empresa" value={form.company_name} /><Info label="Tipo identificación" value={optionLabel(selectedIdentityDocument)} /><Info label="Identificación" value={`${form.nit}${form.verification_digit ? `-${form.verification_digit}` : ""}`} /><Info label="Tipo contribuyente" value={optionLabel(selectedOrganizationType)} /><Info label="Régimen contable" value={optionLabel(selectedAccountingRegime)} /><Info label="Responsabilidad" value={optionLabel(selectedFiscalRegime)} /><Info label="País" value={selectedCountry ? optionLabel(selectedCountry) : "Colombia"} /><Info label="Departamento" value={optionLabel(selectedDepartment)} /><Info label="Ciudad" value={optionLabel(selectedCity)} /><Info label="Dirección" value={form.address} /><Info label="Celular" value={form.mobile} /><Info label="Teléfono" value={form.phone} /><Info label="Responsable" value={`${form.first_name} ${form.last_name}`} /><Info label="Correo" value={form.email} /><Info label="Ambiente" value={environment === "sandbox" ? "Sandbox" : "Producción"} /></div>
+              <div className="grid gap-3 md:grid-cols-2"><Info label="Empresa" value={form.company_name} /><Info label="Tipo identificación" value={optionLabel(selectedIdentityDocument)} /><Info label="Identificación" value={form.nit} /><Info label="DV calculado" value={form.verification_digit || "No aplica"} /><Info label="Tipo contribuyente" value={optionLabel(selectedOrganizationType)} /><Info label="Régimen contable" value={optionLabel(selectedAccountingRegime)} /><Info label="Responsabilidad" value={optionLabel(selectedFiscalRegime)} /><Info label="País" value="🇨🇴 Colombia" /><Info label="Departamento" value={optionLabel(selectedDepartment)} /><Info label="Ciudad" value={optionLabel(selectedCity)} /><Info label="Dirección" value={form.address} /><Info label="Celular" value={form.mobile} /><Info label="Teléfono" value={form.phone} /><Info label="Responsable" value={`${form.first_name} ${form.last_name}`} /><Info label="Correo" value={form.email} /><Info label="Ambiente" value={environment === "sandbox" ? "Sandbox" : "Producción"} /></div>
               <LiveChecks checks={fieldChecks} />
             </div>
           )}
