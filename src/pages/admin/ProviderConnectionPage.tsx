@@ -180,6 +180,11 @@ export function ProviderConnectionPage() {
       token_name: connection.token_name || "",
       parent_company_uuid: connection.parent_company_uuid || "",
     });
+    setGenerateForm((current) => ({
+      ...current,
+      email: current.email || connection.account_email || "",
+      token_name: current.token_name || connection.token_name || "Integracion Nuvvi Sandbox",
+    }));
   }, [connection]);
 
   const saveMutation = useMutation<MatiasConnection, unknown, boolean>({
@@ -225,7 +230,7 @@ export function ProviderConnectionPage() {
 
   const generateMutation = useMutation({
     mutationFn: async () => (await apiClient.post<MatiasConnection>("/matias/generate-pat/", { ...generateForm, environment: form.environment })).data,
-    onSuccess: (data) => { queryClient.setQueryData(["matias-connection", data.environment], data); setGenerateForm((current) => ({ ...current, password: "" })); toast.success("PAT generado, validado y guardado cifrado correctamente"); },
+    onSuccess: (data) => { queryClient.setQueryData(["matias-connection", data.environment], data); setGenerateForm((current) => ({ ...current, password: "" })); toast.success("PAT nuevo generado y validado. Si el PAT anterior sigue activo, revócalo desde MATIAS cuando confirmes que NUVVI ya usa el nuevo."); },
     onError: (error: any) => toast.error(getApiErrorMessage(error, "No se pudo generar el PAT de MATIAS.")),
   });
 
@@ -240,6 +245,18 @@ export function ProviderConnectionPage() {
   const testResults = connection?.last_test_results ?? [];
   const membershipStatus = connection?.membership_status ? humanizeStatus(connection.membership_status) : (connection?.membership_plan || connection?.membership_expires_at ? "Información parcial recibida" : "MATIAS no informó el estado");
   const hasValidPat = !!connection && connection.token_preview !== "Sin configurar" && (!connection.token_expires_at || new Date(connection.token_expires_at).getTime() > Date.now());
+
+  const rotatePat = () => {
+    if (!hasValidPat) {
+      toast.error("No hay un PAT vigente para rotar. Genera uno nuevo desde el panel de MATIAS.");
+      return;
+    }
+    if (!generateForm.email || !generateForm.password) {
+      toast.info("Para rotar el PAT, confirma el correo de la cuenta MATIAS e ingresa su contraseña en el panel Generar token MATIAS.");
+      return;
+    }
+    generateMutation.mutate();
+  };
 
   const changeEnvironment = (environment: "sandbox" | "production") => {
     const applyChange = () => {
@@ -318,9 +335,9 @@ export function ProviderConnectionPage() {
           </Section>
 
           <Section title="3. Autenticación">
-            <div className="grid gap-4 md:grid-cols-2"><Field label="Método"><input readOnly value="Personal Access Token — PAT" className="h-11 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]" /></Field><Field label="Correo de la cuenta"><input value={form.account_email} onChange={(e) => setForm((c) => ({ ...c, account_email: e.target.value }))} className={inputClass} /></Field><Field label="Nombre del token"><input value={form.token_name} onChange={(e) => setForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /></Field><Field label="ID externo del token"><div className="min-h-11 break-all whitespace-normal rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 py-2 text-sm font-semibold text-[#102F4B]">{connection?.token_external_id || "Devuelto por MATIAS"}</div></Field><Field label="Fecha de expiración"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{tokenExpiryLabel(connection?.token_expires_at)}</div></Field><Field label="Token actual"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_preview || "Sin configurar"}</div></Field></div>
+            <div className="grid gap-4 md:grid-cols-2"><Field label="Método"><input readOnly value="Personal Access Token — PAT" className="h-11 w-full rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-bold text-[#102F4B]" /></Field><Field label="Correo de la cuenta"><input value={form.account_email} onChange={(e) => setForm((c) => ({ ...c, account_email: e.target.value }))} className={inputClass} /></Field><Field label="Nombre del token"><input value={form.token_name} onChange={(e) => setForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /></Field><Field label="ID externo del token"><div className="min-h-11 break-all whitespace-normal rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 py-2 text-sm font-semibold text-[#102F4B]">{connection?.token_external_id || "MATIAS no devolvió el ID; NUVVI lo buscará al revocar"}</div></Field><Field label="Fecha de expiración"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{tokenExpiryLabel(connection?.token_expires_at)}</div></Field><Field label="Token actual"><div className="flex h-11 items-center rounded-xl border border-[#D9ECFA] bg-[#F8FCFF] px-3 text-sm font-semibold text-[#102F4B]">{connection?.token_preview || "Sin configurar"}</div></Field></div>
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"><input type={showToken ? "text" : "password"} value={newToken} onChange={(e) => setNewToken(e.target.value)} placeholder="Pegar PAT existente para validarlo" className={inputClass} /><div className="flex gap-2"><button onClick={() => setShowToken((v) => !v)} className="h-11 rounded-xl border border-[#D9ECFA] px-4 text-[#39566F]">{showToken ? <EyeOff size={16} /> : <Eye size={16} />}</button><Button onClick={() => tokenMutation.mutate()} disabled={!newToken || busy} className="h-11 rounded-xl">Validar y reemplazar PAT</Button></div></div>
-            <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" onClick={() => generateMutation.mutate()} disabled={busy || !generateForm.email || !generateForm.password} className="h-10 rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]"><RefreshCw size={15} className="mr-2" />Rotar PAT</Button><Button variant="outline" onClick={() => setConfirmConfig({ title: "Revocar PAT actual", message: "Esta acción revoca el PAT actual en MATIAS y detiene las operaciones autenticadas hasta configurar un nuevo token válido.", confirmLabel: "Revocar PAT", tone: "danger", onConfirm: () => revokeMutation.mutate() })} disabled={busy || !connection?.token_external_id} className="h-10 rounded-xl border-[#F4B8C0] bg-white text-[#C94455] hover:bg-[#FDE8E8]"><Trash2 size={15} className="mr-2" />Revocar PAT actual</Button></div>
+            <div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" onClick={rotatePat} disabled={busy || !hasValidPat} title="Crear un PAT nuevo requiere confirmar la contraseña de MATIAS" className="h-10 rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]"><RefreshCw size={15} className="mr-2" />Rotar PAT</Button><Button variant="outline" onClick={() => setConfirmConfig({ title: "Revocar PAT actual", message: "Esta acción revoca el PAT que NUVVI está usando y detendrá la conexión hasta configurar otro. NUVVI buscará el ID en el listado oficial de MATIAS; si hay varios tokens indistinguibles, no revocará ninguno y te pedirá hacerlo desde el portal.", confirmLabel: "Revocar PAT", tone: "danger", onConfirm: () => revokeMutation.mutate() })} disabled={busy || !hasValidPat} title="NUVVI buscará el ID del PAT en el listado oficial de MATIAS" className="h-10 rounded-xl border-[#F4B8C0] bg-white text-[#C94455] hover:bg-[#FDE8E8]"><Trash2 size={15} className="mr-2" />Revocar PAT actual</Button></div>
           </Section>
 
           <Section title="4. Cuenta Casa de Software">
