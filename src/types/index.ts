@@ -148,6 +148,17 @@ export interface MatiasConnection {
   catalogs_detail: Array<{ endpoint: string; name: string; records: number | null; status: string; last_attempt_at?: string; last_synced_at: string; http_status?: number | null; response_time_ms?: number | null; error: string }>;
 }
 
+export interface MatiasCatalogData {
+  environment: "sandbox" | "production";
+  endpoint: string;
+  name: string;
+  status: string;
+  error_message: string;
+  records_count: number | null;
+  last_synced_at: string | null;
+  results: Array<Record<string, unknown>>;
+}
+
 export interface CompanyProviderLink {
   id: number;
   provider: string;
