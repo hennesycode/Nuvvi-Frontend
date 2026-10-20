@@ -41,6 +41,8 @@ export interface Plan {
   code: string;
   name: string;
   description: string;
+  category: number | null;
+  features: { title: string; items: { title: string; description: string }[] }[];
   monthly_price: string;
   yearly_price: string;
   max_users: number;
@@ -52,6 +54,13 @@ export interface Plan {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface PlanCategory {
+  id: number;
+  name: string;
+  description: string;
+  created_at: string;
 }
 
 export interface Subscription {
