@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 const sidebarItems = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/admin/usuarios", icon: UserCog, label: "Usuarios", superadminOnly: true },
-  { to: "/admin/planes", icon: CreditCard, label: "Planes", superadminOnly: true, nested: true },
+  { to: "/admin/planes", icon: CreditCard, label: "Planes", superadminOnly: true },
   { to: "/admin/empresas", icon: Users, label: "Empresas" },
   { to: "/admin/conexion-proveedor", icon: PlugZap, label: "Conexión proveedor", superadminOnly: true },
   { to: "/admin/actividad", icon: Activity, label: "Actividad" },
@@ -86,7 +86,7 @@ export function AdminLayout() {
                 onClick={() => navigate(item.to)}
                 className={cn(
                   "flex items-center gap-3 w-full rounded-xl text-sm font-medium transition-all duration-200",
-                  collapsed ? "justify-center px-0 py-3" : item.nested ? "ml-3 w-[calc(100%-0.75rem)] border-l border-[#D9ECFA] rounded-l-none px-3 py-2.5" : "px-3 py-2.5",
+                  collapsed ? "justify-center px-0 py-3" : "px-3 py-2.5",
                   isActive
                     ? "bg-[#E8F0FE] text-[#246FC1]"
                     : "text-[#39566F] hover:bg-[#F8FCFF] hover:text-[#102F4B]"
@@ -151,7 +151,6 @@ export function AdminLayout() {
                       onClick={() => { navigate(item.to); setMobileOpen(false); }}
                       className={cn(
                         "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                        item.nested && "ml-3 w-[calc(100%-0.75rem)] border-l border-[#D9ECFA] rounded-l-none",
                         isActive
                           ? "bg-[#E8F0FE] text-[#246FC1]"
                           : "text-[#39566F] hover:bg-[#F8FCFF]"
