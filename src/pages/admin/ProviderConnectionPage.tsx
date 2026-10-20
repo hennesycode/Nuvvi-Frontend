@@ -51,8 +51,45 @@ const emptyForm: FormState = {
 };
 
 function formatDate(value?: string | null) {
-  if (!value) return "Sin registro";
+  if (!value) return "Sin datos registrados";
   return new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+const statusLabels: Record<string, string> = {
+  CONNECTED: "Conectado",
+  DISCONNECTED: "Desconectado",
+  READY_TO_REGISTER_COMPANIES: "Conexión y acceso multiempresa verificados",
+  CATALOGS_NOT_SYNCHRONIZED: "Catálogos pendientes de sincronización",
+  CATALOGS_PENDING: "Sincronización pendiente",
+  CATALOGS_PARTIAL: "Sincronización parcial",
+  DISABLED: "Integración desactivada",
+  NOT_CONFIGURED: "Sin configurar",
+  TESTING: "Verificando conexión",
+  INACTIVE: "Inactivo",
+  PAT_REQUIRED: "Se requiere un token PAT",
+  PAT_VALID: "Token PAT válido",
+  PAT_ENDPOINT_NOT_FOUND: "No se encontró el servicio de tokens",
+  PAT_VALIDATION_ERROR: "Error al validar el token PAT",
+  MULTICOMPANY_VERIFIED: "Acceso multiempresa verificado",
+  synced: "Sincronizado",
+  pending: "Pendiente",
+  partial: "Parcial",
+  error: "Error",
+  success: "Correcto",
+  warning: "Advertencia",
+  sandbox: "Sandbox",
+  production: "Producción",
+  active: "Activa",
+  activo: "Activa",
+  valid: "Vigente",
+  vigente: "Vigente",
+  expired: "Vencida",
+  vencido: "Vencida",
+};
+
+function humanizeStatus(value?: string | null) {
+  if (!value) return "Sin diagnóstico";
+  return statusLabels[value] || value.replace(/_/g, " ").toLowerCase().replace(/^\p{L}/u, (letter: string) => letter.toLocaleUpperCase("es-CO"));
 }
 
 function statusStyle(status: string) {
@@ -81,7 +118,7 @@ function getApiErrorMessage(error: any, fallback: string) {
 }
 
 function StatusPill({ value }: { value: string }) {
-  return <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusStyle(value))}>{value}</span>;
+  return <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusStyle(value))}>{humanizeStatus(value)}</span>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -113,7 +150,7 @@ export function ProviderConnectionPage() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<string | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null);
-  const [generateForm, setGenerateForm] = useState({ email: "", password: "", token_name: "Integracion Nuvvi Sandbox", description: "Token principal del servidor de facturacion", expires_in_days: 90 });
+  const [generateForm, setGenerateForm] = useState({ email: "", password: "", token_name: "Integracion Nuvvi Sandbox", description: "Token principal del servidor de facturacion", expires_in_days: 365 });
 
   const connectionQuery = useQuery({
     queryKey: ["matias-connection", selectedEnvironment],
@@ -201,7 +238,7 @@ export function ProviderConnectionPage() {
   const canAct = !!connection && !connectionQuery.isLoading;
   const busy = saveMutation.isPending || tokenMutation.isPending || testMutation.isPending || syncMutation.isPending || generateMutation.isPending || revokeMutation.isPending;
   const testResults = connection?.last_test_results ?? [];
-  const membershipStatus = connection?.membership_status || (connection?.membership_plan || connection?.membership_expires_at ? "Parcialmente detectada" : "Estado no informado");
+  const membershipStatus = connection?.membership_status ? humanizeStatus(connection.membership_status) : (connection?.membership_plan || connection?.membership_expires_at ? "Información parcial recibida" : "MATIAS no informó el estado");
   const hasValidPat = !!connection && connection.token_preview !== "Sin configurar" && (!connection.token_expires_at || new Date(connection.token_expires_at).getTime() > Date.now());
 
   const changeEnvironment = (environment: "sandbox" | "production") => {
@@ -246,19 +283,19 @@ export function ProviderConnectionPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/12"><PlugZap size={25} /></div>
               <div>
                 <h2 className="text-xl font-extrabold font-manrope">MATIAS API</h2>
-                <p className="text-sm text-white/75">{connection?.environment_label || "Sandbox"} · PAT {connection?.token_preview === "Sin configurar" ? "pendiente" : "configurado"} · {connection?.operational_status || "Sin diagnóstico"}</p>
+                <p className="text-sm text-white/75">{humanizeStatus(connection?.environment || "sandbox")} · Token PAT {connection?.token_preview === "Sin configurar" ? "pendiente" : "configurado"} · {humanizeStatus(connection?.operational_status)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-bold"><span className={cn("h-2.5 w-2.5 rounded-full", connection?.connection_status === "CONNECTED" ? "bg-[#66E3B4]" : "bg-[#FFB4B4]")} />{connection?.connection_status || "DISCONNECTED"}</div>
+            <div className="flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-bold"><span className={cn("h-2.5 w-2.5 rounded-full", connection?.connection_status === "CONNECTED" ? "bg-[#66E3B4]" : "bg-[#FFB4B4]")} />{humanizeStatus(connection?.connection_status || "DISCONNECTED")}</div>
           </div>
         </div>
         <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4 lg:p-6">
-          <Info label="Ambiente" value={connection?.environment_label || "Sandbox"} />
+          <Info label="Ambiente" value={humanizeStatus(connection?.environment || "sandbox")} />
           <Info label="Autenticación" value={connection?.token_preview === "Sin configurar" ? "PAT pendiente" : tokenExpiryLabel(connection?.token_expires_at)} />
           <Info label="Cuenta principal" value={connection?.external_company_name || "No detectada"} />
           <Info label="NIT" value={connection?.external_company_nit || "-"} />
           <Info label="UUID empresa principal" value={connection?.parent_company_uuid ? `${connection.parent_company_uuid.slice(0, 8)}-****-****` : "-"} />
-          <Info label="Listado de clientes MATIAS" value={connection?.multicompany_verified ? "Accesible" : "Pendiente"} />
+          <Info label="Listado de clientes MATIAS" value={connection?.multicompany_verified ? "Accesible" : "Pendiente de verificación"} />
           <Info label="Catálogos" value={`${connection?.catalogs_synced_count || 0}/${connection?.catalogs_total_count || 20} sincronizados`} />
           <Info label="Tiempo respuesta" value={connection?.last_response_time_ms ? `${connection.last_response_time_ms} ms` : "-"} />
         </div>
@@ -296,11 +333,11 @@ export function ProviderConnectionPage() {
         </div>
 
         <aside className="space-y-6">
-          <Section title="Generar token MATIAS"><div className="space-y-3"><input placeholder="Correo" value={generateForm.email} onChange={(e) => setGenerateForm((c) => ({ ...c, email: e.target.value }))} className={inputClass} /><input type="password" placeholder="Contraseña temporal (no se guarda)" value={generateForm.password} onChange={(e) => setGenerateForm((c) => ({ ...c, password: e.target.value }))} className={inputClass} /><div><input placeholder="Nombre del token" value={generateForm.token_name} onChange={(e) => setGenerateForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /><p className="mt-1 text-xs text-[#6C8398]">MATIAS solo acepta letras sin tilde, números, espacios, guiones, guiones bajos y puntos.</p></div><input placeholder="Descripción" value={generateForm.description} onChange={(e) => setGenerateForm((c) => ({ ...c, description: e.target.value }))} className={inputClass} /><input type="number" min={1} max={90} aria-label="Vigencia del PAT en días (1–90)" value={generateForm.expires_in_days} onChange={(e) => setGenerateForm((c) => ({ ...c, expires_in_days: Math.min(90, Number(e.target.value)) }))} className={inputClass} />{hasValidPat && <p className="rounded-xl bg-[#D8F5EB] px-3 py-2 text-xs font-semibold text-[#178C68]">Ya existe un PAT válido para este ambiente. Conserva el token actual hasta su vencimiento; usa Rotar PAT solo si necesitas reemplazarlo antes.</p>}<Button onClick={() => generateMutation.mutate()} disabled={hasValidPat || busy || !generateForm.email || !generateForm.password} className="h-11 w-full rounded-xl"><KeyRound size={16} className="mr-2" />Iniciar sesión y generar token</Button></div></Section>
+          <Section title="Generar token MATIAS"><div className="space-y-3"><input placeholder="Correo" value={generateForm.email} onChange={(e) => setGenerateForm((c) => ({ ...c, email: e.target.value }))} className={inputClass} /><input type="password" placeholder="Contraseña temporal (no se guarda)" value={generateForm.password} onChange={(e) => setGenerateForm((c) => ({ ...c, password: e.target.value }))} className={inputClass} /><div><input placeholder="Nombre del token" value={generateForm.token_name} onChange={(e) => setGenerateForm((c) => ({ ...c, token_name: e.target.value }))} className={inputClass} /><p className="mt-1 text-xs text-[#6C8398]">MATIAS solo acepta letras sin tilde, números, espacios, guiones, guiones bajos y puntos.</p></div><input placeholder="Descripción" value={generateForm.description} onChange={(e) => setGenerateForm((c) => ({ ...c, description: e.target.value }))} className={inputClass} /><label className="block space-y-1.5"><span className="text-xs font-semibold text-[#39566F]">Vigencia del PAT (1–365 días; predeterminado: 1 año)</span><input type="number" min={1} max={365} aria-label="Vigencia del PAT en días (1–365)" value={generateForm.expires_in_days} onChange={(e) => setGenerateForm((c) => ({ ...c, expires_in_days: Math.min(365, Number(e.target.value)) }))} className={inputClass} /></label>{hasValidPat && <p className="rounded-xl bg-[#D8F5EB] px-3 py-2 text-xs font-semibold text-[#178C68]">Ya existe un PAT válido para este ambiente. Conserva el token actual hasta su vencimiento; usa Rotar PAT solo si necesitas reemplazarlo antes.</p>}<Button onClick={() => generateMutation.mutate()} disabled={hasValidPat || busy || !generateForm.email || !generateForm.password} className="h-11 w-full rounded-xl"><KeyRound size={16} className="mr-2" />Iniciar sesión y generar token</Button></div></Section>
 
           <Section title="5. Catálogos DIAN y MATIAS"><div className="space-y-3"><div className="rounded-2xl bg-[#F8FCFF] p-4"><p className="text-sm font-bold text-[#102F4B]">Catálogos: {connection?.catalogs_synced_count || 0}/{connection?.catalogs_total_count || 20} sincronizados</p><p className="mt-1 text-xs text-[#6C8398]">Endpoints públicos; no requieren PAT. Los catálogos sincronizados quedan guardados por ambiente y disponibles para formularios. Último intento: {formatDate(connection?.catalogs_last_attempt_at)} · Último éxito completo: {formatDate(connection?.catalogs_last_synced_at)}</p></div><Button onClick={() => syncMutation.mutate()} disabled={busy} className="h-11 w-full rounded-xl"><RefreshCw size={16} className="mr-2" />Sincronizar los 20 catálogos</Button><div className="max-h-96 overflow-y-auto rounded-2xl border border-[#D9ECFA]">{(connection?.catalogs_detail || []).map((item) => <div key={item.endpoint} className="border-b border-[#EEF6FC] px-3 py-2 last:border-0"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-[#102F4B]">{item.name}</p><p className="text-xs text-[#6C8398]">{item.endpoint} · HTTP {item.http_status ?? "-"} · {item.response_time_ms ?? "-"} ms</p></div><div className="flex items-center gap-2"><StatusPill value={item.status === "Sincronizado" ? "synced" : item.status === "Pendiente" ? "pending" : "error"} /><button type="button" onClick={() => setSelectedCatalog(item.endpoint.replace(/^\//, ""))} disabled={item.status !== "Sincronizado" && !item.last_synced_at} className="text-xs font-bold text-[#246FC1] disabled:text-[#9AAABA]">Ver datos</button></div></div><p className="mt-1 text-xs text-[#6C8398]">{item.records ?? "—"} registros · Último éxito: {formatDate(item.last_synced_at || null)}</p>{item.error && <p className="mt-1 text-xs font-semibold text-[#C94455]">{item.error} {item.last_synced_at ? "Se conserva el último catálogo válido." : ""}</p>}</div>)}</div></div></Section>
 
-          <Section title="6. Diagnóstico y registros"><div className="space-y-3"><Info label="Última prueba" value={formatDate(connection?.last_test_at)} /><Info label="Último error" value={connection?.last_error_message || "Ninguno"} /><Info label="Ambiente detectado" value={connection?.environment_detected || "-"} /><Button variant="outline" onClick={() => setShowDiagnostics((v) => !v)} className="h-11 w-full rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]">{showDiagnostics ? "Ocultar diagnóstico" : "Ver diagnóstico"}</Button>{showDiagnostics && <div className="overflow-hidden rounded-2xl border border-[#D9ECFA]">{testResults.map((result) => <div key={`${result.label}-${result.endpoint}`} className="grid gap-2 border-b border-[#EEF6FC] px-3 py-2 text-xs last:border-0 sm:grid-cols-[1fr_1fr_70px_80px_90px]"><div className="flex items-center gap-2 font-bold text-[#102F4B]">{result.status === "success" ? <CheckCircle2 className="text-[#178C68]" size={15} /> : result.status === "warning" ? <AlertTriangle className="text-[#B97812]" size={15} /> : <XCircle className="text-[#C94455]" size={15} />}{result.label}</div><div className="text-[#6C8398]">{result.endpoint || "-"}</div><div className="text-[#6C8398]">{result.http_status ?? "-"}</div><div className="text-[#6C8398]">{result.response_time_ms ?? "-"} ms</div><div><StatusPill value={result.status === "success" ? "synced" : result.status === "warning" ? "partial" : "error"} /></div><p className="text-[#6C8398] sm:col-span-5">{result.detail}</p>{result.json_keys?.length ? <p className="text-[#6C8398] sm:col-span-5">Claves JSON: {result.json_keys.join(", ")}</p> : null}{result.payload_sanitized ? <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#F8FCFF] p-2 text-[11px] text-[#39566F] sm:col-span-5">{JSON.stringify(result.payload_sanitized, null, 2)}</pre> : null}</div>)}</div>}</div></Section>
+          <Section title="6. Diagnóstico y registros"><div className="space-y-3"><Info label="Última prueba" value={formatDate(connection?.last_test_at)} /><Info label="Último error" value={connection?.last_error_message || "Ninguno"} /><Info label="Ambiente detectado" value={humanizeStatus(connection?.environment_detected)} /><Button variant="outline" onClick={() => setShowDiagnostics((v) => !v)} className="h-11 w-full rounded-xl border-[#D9ECFA] bg-white text-[#39566F] hover:bg-[#F8FCFF]">{showDiagnostics ? "Ocultar diagnóstico" : "Ver diagnóstico"}</Button>{showDiagnostics && <div className="overflow-hidden rounded-2xl border border-[#D9ECFA]">{testResults.map((result) => <div key={`${result.label}-${result.endpoint}`} className="grid gap-2 border-b border-[#EEF6FC] px-3 py-2 text-xs last:border-0 sm:grid-cols-[1fr_1fr_70px_80px_90px]"><div className="flex items-center gap-2 font-bold text-[#102F4B]">{result.status === "success" ? <CheckCircle2 className="text-[#178C68]" size={15} /> : result.status === "warning" ? <AlertTriangle className="text-[#B97812]" size={15} /> : <XCircle className="text-[#C94455]" size={15} />}{result.label}</div><div className="text-[#6C8398]">{result.endpoint || "-"}</div><div className="text-[#6C8398]">HTTP {result.http_status ?? "-"}</div><div className="text-[#6C8398]">{result.response_time_ms ?? "-"} ms</div><div><StatusPill value={result.status === "success" ? "synced" : result.status === "warning" ? "partial" : "error"} /></div><p className="text-[#6C8398] sm:col-span-5">{result.detail}</p>{result.json_keys?.length ? <p className="text-[#6C8398] sm:col-span-5">Campos recibidos: {result.json_keys.join(", ")}</p> : null}{result.payload_sanitized ? <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#F8FCFF] p-2 text-[11px] text-[#39566F] sm:col-span-5">{JSON.stringify(result.payload_sanitized, null, 2)}</pre> : null}</div>)}</div>}</div></Section>
         </aside>
       </div>
 
