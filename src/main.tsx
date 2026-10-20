@@ -21,7 +21,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <QueryClientProvider client={queryClient}>
         <App />
         <Toaster
-          position="top-right"
+          position="top-center"
+          style={{ zIndex: 100000 }}
           toastOptions={{
             style: {
               background: "rgba(12, 30, 51, 0.95)",
