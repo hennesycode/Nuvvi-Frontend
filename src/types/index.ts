@@ -42,6 +42,11 @@ export interface Plan {
   name: string;
   description: string;
   short_description: string;
+  target_audience: string;
+  commercial_badge: string;
+  display_order: number;
+  catalog_status: "draft" | "published" | "retired" | "archived";
+  visibility: "public" | "private" | "link" | "quote";
   plan_type: "invoicing" | "payroll_addon" | "enterprise";
   category: number | null;
   features: { title: string; items: { title: string; description: string }[] }[];
@@ -71,6 +76,8 @@ export interface PlanCategory {
   id: number;
   name: string;
   description: string;
+  display_order: number;
+  is_active: boolean;
   created_at: string;
 }
 
