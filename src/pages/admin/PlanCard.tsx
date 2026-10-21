@@ -7,6 +7,8 @@ interface PlanCardProps {
   categoryName?: string;
   onDuplicate: (plan: Plan) => void;
   onPublish: (plan: Plan) => void;
+  onApproveProposal: (plan: Plan) => void;
+  onValidateTax: (plan: Plan, note: string) => void;
   onCreateVersion: (plan: Plan) => void;
   onRetire: (plan: Plan) => void;
   onArchive: (plan: Plan) => void;
@@ -27,6 +29,8 @@ export function PlanCard({
   categoryName,
   onDuplicate,
   onPublish,
+  onApproveProposal,
+  onValidateTax,
   onCreateVersion,
   onRetire,
   onArchive,
@@ -67,6 +71,7 @@ export function PlanCard({
               <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${published ? "bg-[#E7F5EF] text-[#178C68]" : "bg-[#F1F6FA] text-[#647D92]"}`}>
                 {statusLabel}
               </span>
+              {plan.commercial_status === "proposal" && <span className="rounded-md bg-[#FFF4DB] px-2 py-1 text-[10px] font-bold text-[#8C6718]">Propuesta · IVA pendiente</span>}
               {plan.version_number > 1 && <span className="rounded-md bg-[#F1F6FA] px-2 py-1 text-[10px] font-bold text-[#647D92]">Versión {plan.version_number}</span>}
             </div>
             <h2 className="truncate text-lg font-extrabold tracking-[-0.02em] text-[#102F4B]">{plan.name}</h2>
@@ -81,7 +86,10 @@ export function PlanCard({
           <div className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-[#D9ECFA] bg-white p-1.5 shadow-[0_12px_32px_rgba(16,47,75,0.14)]">
             <Action onClick={() => onDuplicate(plan)} icon={<Copy size={14} />}>Duplicar plan</Action>
             {plan.catalog_status === "draft" && <Action onClick={() => onEdit(plan)} icon={<Pencil size={14} />}>Editar borrador</Action>}
-            {plan.catalog_status === "draft" && <Action onClick={() => onPublish(plan)}>Publicar</Action>}
+            {plan.catalog_status === "draft" && plan.commercial_status === "legacy" && <Action onClick={() => onPublish(plan)}>Publicar oferta anterior</Action>}
+            {plan.catalog_status === "draft" && plan.commercial_status === "proposal" && <Action onClick={() => onApproveProposal(plan)}>Aprobar propuesta comercial</Action>}
+            {plan.catalog_status === "draft" && plan.commercial_status === "proposal" && <Action onClick={() => { const note = window.prompt("Confirma la revisión tributaria e ingresa su referencia:"); if (note?.trim()) onValidateTax(plan, note.trim()); }}>Registrar validación tributaria</Action>}
+            {plan.catalog_status === "draft" && plan.commercial_status === "approved" && plan.tax_validation_status === "validated" && <Action onClick={() => onPublish(plan)}>Publicar propuesta aprobada</Action>}
             {published && <Action onClick={() => onCreateVersion(plan)}>Crear versión</Action>}
             {published && <Action onClick={() => onRetire(plan)}>Retirar</Action>}
             {plan.catalog_status !== "archived" && <Action onClick={() => onArchive(plan)}>Archivar</Action>}
@@ -117,9 +125,9 @@ export function PlanCard({
 
       <div className="flex items-center justify-between gap-3 border-t border-[#EAF1F7] bg-[#FBFDFF] px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-3 text-xs text-[#647D92]">
-          <span className="whitespace-nowrap">{plan.plan_type === "payroll_addon" ? `${plan.max_employees} empleados` : `${plan.max_users} usuarios`}</span>
+          <span className="whitespace-nowrap">{plan.plan_type === "enterprise" ? "Alcance por propuesta" : plan.plan_type === "payroll_addon" ? `${plan.max_employees ?? 0} empleados` : `${plan.max_users ?? 0} usuarios`}</span>
           <span className="h-3.5 w-px bg-[#D9E5EF]" />
-          <span className="truncate">{plan.plan_type === "payroll_addon" ? `${plan.annual_document_quota.toLocaleString("es-CO")} docs/año` : plan.annual_document_quota ? `${plan.annual_document_quota.toLocaleString("es-CO")} docs/año` : `${plan.max_documents_per_month} docs/mes`}</span>
+          <span className="truncate">{plan.plan_type === "enterprise" ? "Por cotización" : plan.annual_document_quota ? `${plan.annual_document_quota.toLocaleString("es-CO")} docs/año` : `${plan.max_documents_per_month ?? 0} docs/mes`}</span>
         </div>
         {plan.catalog_status === "draft" && <Button variant="outline" onClick={() => onEdit(plan)} className="h-8 shrink-0 rounded-lg border-[#D9ECFA] px-3 text-xs font-bold text-[#246FC1] hover:bg-[#EAF4FD]">Editar</Button>}
       </div>

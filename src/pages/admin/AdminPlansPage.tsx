@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
-import { Activity, CircleDollarSign, FolderPlus, Layers3, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { Activity, CircleDollarSign, FolderPlus, Layers3, PackagePlus, Plus, Search, Tag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/api/client";
 import { Button } from "@/components/ui/button";
-import type { ApiResponse, Plan, PlanCategory } from "@/types";
+import type { ApiResponse, Capability, Plan, PlanBundle, PlanCategory } from "@/types";
 import { PlanEditorDialog } from "./PlanEditorDialog";
 import { PlanCard } from "./PlanCard";
 import { blankPlanDraft, type PlanDraft } from "./planEditorConfig";
@@ -32,11 +32,21 @@ export function AdminPlansPage() {
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
+  const [bundleName, setBundleName] = useState("");
+  const [bundleBilling, setBundleBilling] = useState("");
+  const [bundlePayroll, setBundlePayroll] = useState("");
+  const [capabilityNotes, setCapabilityNotes] = useState<Record<number, string>>({});
 
   const plansQuery = useQuery({ queryKey: ["plans"], queryFn: async () => rows((await apiClient.get<ApiResponse<Plan> | Plan[]>("/plans/")).data) });
   const categoriesQuery = useQuery({ queryKey: ["plan-categories"], queryFn: async () => rows((await apiClient.get<ApiResponse<PlanCategory> | PlanCategory[]>("/plan-categories/")).data) });
+  const bundlesQuery = useQuery({ queryKey: ["plan-bundles"], queryFn: async () => rows((await apiClient.get<ApiResponse<PlanBundle> | PlanBundle[]>("/plan-bundles/")).data) });
+  const capabilitiesQuery = useQuery({ queryKey: ["capabilities"], queryFn: async () => rows((await apiClient.get<ApiResponse<Capability> | Capability[]>("/capabilities/")).data) });
   const plans = plansQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+  const bundles = bundlesQuery.data ?? [];
+  const billingPlans = plans.filter((plan) => plan.plan_type === "invoicing");
+  const payrollPlans = plans.filter((plan) => plan.plan_type === "payroll_addon");
+  const capabilities = capabilitiesQuery.data ?? [];
   const visiblePlans = useMemo(() => plans.filter((plan) => {
     const term = search.trim().toLowerCase();
     return (!term || [plan.name, plan.code, plan.description, categories.find((category) => category.id === plan.category)?.name].some((value) => value?.toLowerCase().includes(term)))
@@ -77,15 +87,36 @@ export function AdminPlansPage() {
     onSuccess: (category) => { cache.invalidateQueries({ queryKey: ["plan-categories"] }); setForm((current) => ({ ...current, category: category.id })); setCategoryName(""); setCategoryDescription(""); setShowCategoryForm(false); toast.success("Categoría creada"); },
     onError: () => toast.error("No se pudo crear la categoría. Verifica que el nombre no esté repetido."),
   });
+  const saveBundle = useMutation({
+    mutationFn: async () => {
+      const safeSlug = bundleName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      return (await apiClient.post<PlanBundle>("/plan-bundles/", {
+        slug: safeSlug, name: bundleName.trim(), short_description: "Composición de componentes independientes; cupos separados.",
+        billing_plan: Number(bundleBilling), payroll_plan: Number(bundlePayroll), display_order: bundles.length + 1,
+      })).data;
+    },
+    onSuccess: () => { cache.invalidateQueries({ queryKey: ["plan-bundles"] }); setBundleName(""); toast.success("Composición guardada como propuesta privada"); },
+    onError: () => toast.error("No se pudo guardar. Verifica que facturación y nómina sean componentes distintos."),
+  });
+  const updateCapability = useMutation({
+    mutationFn: async ({ capability, validation_status }: { capability: Capability; validation_status: Capability["validation_status"] }) => {
+      const validation_notes = capabilityNotes[capability.id] ?? capability.validation_notes;
+      return (await apiClient.patch<Capability>(`/capabilities/${capability.id}/`, { validation_status, validation_notes })).data;
+    },
+    onSuccess: () => { cache.invalidateQueries({ queryKey: ["capabilities"] }); cache.invalidateQueries({ queryKey: ["plans"] }); toast.success("Estado técnico actualizado"); },
+    onError: () => toast.error("No se pudo actualizar. Para marcar disponible debes registrar la evidencia técnica."),
+  });
   const duplicatePlan = useMutation({ mutationFn: async (plan: Plan) => (await apiClient.post<Plan>(`/plans/${plan.id}/duplicate/`)).data, onSuccess: (plan) => { cache.invalidateQueries({ queryKey: ["plans"] }); editPlan(plan); toast.success("Borrador duplicado; puedes editarlo antes de publicarlo"); }, onError: () => toast.error("No se pudo duplicar el plan.") });
   const newVersion = useMutation({ mutationFn: async (plan: Plan) => (await apiClient.post<Plan>(`/plans/${plan.id}/new-version/`)).data, onSuccess: (plan) => { cache.invalidateQueries({ queryKey: ["plans"] }); editPlan(plan); toast.success(`Versión ${plan.version_number} creada como borrador`); }, onError: () => toast.error("No se pudo crear la versión del plan.") });
   const updateLifecycle = useMutation({ mutationFn: async ({ plan, action }: { plan: Plan; action: "publish" | "retire" | "archive" }) => (await apiClient.post<Plan>(`/plans/${plan.id}/${action}/`)).data, onSuccess: (plan) => { cache.invalidateQueries({ queryKey: ["plans"] }); toast.success(`Plan ${plan.catalog_status === "published" ? "publicado" : plan.catalog_status === "retired" ? "retirado" : "archivado"}`); }, onError: (error: any) => toast.error(error?.response?.data?.detail || "No se pudo cambiar el estado del plan.") });
+  const approveProposal = useMutation({ mutationFn: async (plan: Plan) => (await apiClient.post<Plan>(`/plans/${plan.id}/approve-proposal/`)).data, onSuccess: () => { cache.invalidateQueries({ queryKey: ["plans"] }); toast.success("Aprobación comercial registrada; falta validar impuestos y capacidades técnicas."); }, onError: () => toast.error("No se pudo aprobar la propuesta comercial.") });
+  const validateTax = useMutation({ mutationFn: async ({ plan, note }: { plan: Plan; note: string }) => (await apiClient.post<Plan>(`/plans/${plan.id}/validate-tax/`, { validated: true, note })).data, onSuccess: () => { cache.invalidateQueries({ queryKey: ["plans"] }); toast.success("Validación tributaria registrada."); }, onError: () => toast.error("No se pudo registrar la validación tributaria.") });
   const deletePlan = useMutation({ mutationFn: async (plan: Plan) => apiClient.delete(`/plans/${plan.id}/`), onSuccess: () => { cache.invalidateQueries({ queryKey: ["plans"] }); toast.success("Plan eliminado"); }, onError: (error: any) => toast.error(error?.response?.data?.detail || "No se pudo eliminar el plan. Si tiene suscripciones, desactívalo para conservar el historial.") });
   const deleteCategory = useMutation({ mutationFn: async (category: PlanCategory) => apiClient.delete(`/plan-categories/${category.id}/`), onSuccess: () => { cache.invalidateQueries({ queryKey: ["plan-categories"] }); toast.success("Categoría eliminada"); }, onError: () => toast.error("No se pudo eliminar. Reasigna primero los planes de esta categoría.") });
 
   function closeForm() { setShowForm(false); setEditing(null); setForm(blankPlanDraft); }
   function createPlan() { setEditing(null); setForm(blankPlanDraft); setShowForm(true); }
-  function editPlan(plan: Plan) { setEditing(plan); setForm({ ...blankPlanDraft, ...plan, monthly_price: plan.monthly_price ?? "", yearly_price: plan.yearly_price ?? "", features: plan.features ?? [] }); setShowForm(true); }
+  function editPlan(plan: Plan) { setEditing(plan); setForm({ ...blankPlanDraft, ...plan, annual_document_quota: plan.annual_document_quota ?? 0, max_users: plan.max_users ?? 0, accountant_users: plan.accountant_users ?? 0, max_branches: plan.max_branches ?? 0, max_documents_per_month: plan.max_documents_per_month ?? 0, max_employees: plan.max_employees ?? 0, monthly_price: plan.monthly_price ?? "", yearly_price: plan.yearly_price ?? "", features: plan.features ?? [] }); setShowForm(true); }
 
   return <div className="mx-auto max-w-7xl space-y-6 pb-8">
     <header className="relative overflow-hidden rounded-3xl border border-[#D9ECFA] bg-[linear-gradient(115deg,#FFFFFF_0%,#F5FAFF_100%)] px-5 py-6 sm:px-7 sm:py-7">
@@ -97,6 +128,18 @@ export function AdminPlansPage() {
     </header>
 
     <section aria-label="Resumen del catálogo" className="grid gap-3 sm:grid-cols-3"><MetricCard label="Planes creados" value={plans.length} icon={CircleDollarSign} /><MetricCard label="Planes publicados" value={plans.filter((plan) => plan.catalog_status === "published").length} icon={Activity} tone="green" /><MetricCard label="Categorías" value={categories.length} icon={Tag} /></section>
+
+    <section className={`${cardClass} p-5 sm:p-6`} aria-labelledby="bundles-title"><div className="flex items-start gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF4FD] text-[#246FC1]"><PackagePlus size={19} /></span><div><h2 id="bundles-title" className="font-manrope text-lg font-extrabold text-[#102F4B]">Combos · productos compuestos</h2><p className="mt-1 max-w-2xl text-sm leading-5 text-[#71879A]">Cada combinación referencia un plan de facturación y otro de nómina. Los dos cupos quedan separados; el precio es la suma directa de ambos componentes.</p></div></div>
+      <form className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]" onSubmit={(event) => { event.preventDefault(); if (bundleName.trim() && bundleBilling && bundlePayroll) saveBundle.mutate(); }}>
+        <label className="space-y-1 text-xs font-bold text-[#39566F]"><span>Nombre</span><input required value={bundleName} onChange={(event) => setBundleName(event.target.value)} placeholder="Ej. Emprendedor" className={inputClass} /></label>
+        <label className="space-y-1 text-xs font-bold text-[#39566F]"><span>Facturación</span><select required value={bundleBilling} onChange={(event) => setBundleBilling(event.target.value)} className={inputClass}><option value="">Elegir plan</option>{billingPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} · {plan.yearly_price} anual</option>)}</select></label>
+        <label className="space-y-1 text-xs font-bold text-[#39566F]"><span>Nómina</span><select required value={bundlePayroll} onChange={(event) => setBundlePayroll(event.target.value)} className={inputClass}><option value="">Elegir complemento</option>{payrollPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} · {plan.yearly_price} anual</option>)}</select></label>
+        <Button disabled={saveBundle.isPending || !bundleName.trim() || !bundleBilling || !bundlePayroll} className="mt-auto h-10 rounded-xl bg-[#246FC1] text-white hover:bg-[#1B5FA8]"><Plus size={15} className="mr-1" />Guardar combo</Button>
+      </form>
+      <div className="mt-4 grid gap-2 md:grid-cols-3">{bundles.map((bundle) => <article key={bundle.id} className="rounded-xl border border-[#EAF1F7] bg-[#FBFDFF] p-3"><div className="flex items-center justify-between"><strong className="text-sm text-[#102F4B]">{bundle.name}</strong><span className="rounded-md bg-[#FFF4DB] px-2 py-1 text-[10px] font-bold text-[#8C6718]">Propuesta privada</span></div><p className="mt-1 text-xs text-[#71879A]">{bundle.billing_plan_details?.name} + {bundle.payroll_plan_details?.name}</p><p className="mt-2 text-xs font-semibold text-[#39566F]">Mensual {bundle.monthly_price} · Anual {bundle.yearly_price}</p><p className="mt-1 text-[11px] text-[#71879A]">Cupos independientes · un certificado por NIT</p></article>)}</div>
+    </section>
+
+    <section className={`${cardClass} p-5 sm:p-6`} aria-labelledby="capabilities-title"><div><h2 id="capabilities-title" className="font-manrope text-lg font-extrabold text-[#102F4B]">Validación técnica de capacidades</h2><p className="mt-1 text-sm leading-5 text-[#71879A]">Una función solo se considera disponible después de comprobar implementación y dejar evidencia. Las capacidades propuestas no se anuncian como disponibles.</p></div><div className="mt-4 grid gap-3 md:grid-cols-2">{capabilities.map((capability) => <article key={capability.id} className="rounded-xl border border-[#EAF1F7] bg-[#FBFDFF] p-3"><div className="flex items-start justify-between gap-2"><strong className="text-sm text-[#102F4B]">{capability.name}</strong><span className={`rounded-md px-2 py-1 text-[10px] font-bold ${capability.validation_status === "available" ? "bg-[#E7F5EF] text-[#178C68]" : "bg-[#FFF4DB] text-[#8C6718]"}`}>{capability.validation_status === "available" ? "Validada" : capability.validation_status === "unavailable" ? "No disponible" : "Pendiente"}</span></div><div className="mt-2 grid gap-2 sm:grid-cols-[1fr_150px_auto]"><input aria-label={`Evidencia técnica de ${capability.name}`} value={capabilityNotes[capability.id] ?? capability.validation_notes} onChange={(event) => setCapabilityNotes((current) => ({ ...current, [capability.id]: event.target.value }))} placeholder="Evidencia / referencia" className={`${inputClass} py-2 text-xs`} /><select aria-label={`Estado de ${capability.name}`} value={capability.validation_status} onChange={(event) => updateCapability.mutate({ capability, validation_status: event.target.value as Capability["validation_status"] })} className={`${inputClass} py-2 text-xs`}><option value="pending">Pendiente</option><option value="available">Disponible y validada</option><option value="unavailable">No disponible</option></select><Button type="button" variant="outline" onClick={() => updateCapability.mutate({ capability, validation_status: capability.validation_status })} className="h-9 rounded-lg border-[#D9ECFA] px-3 text-xs text-[#246FC1]">Guardar evidencia</Button></div></article>)}</div></section>
 
     <section className={`${cardClass} p-3.5 sm:p-4`}><div className="grid gap-2.5 md:grid-cols-[minmax(240px,1fr)_220px_180px]"><label className="relative"><span className="sr-only">Buscar planes</span><Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7890A5]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, código o descripción" className={`${inputClass} h-11 border-transparent bg-[#F7FAFD] pl-10 focus:border-[#4F9FF0] focus:bg-white`} /></label><label><span className="sr-only">Filtrar por categoría</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className={`${inputClass} h-11 border-transparent bg-[#F7FAFD] focus:bg-white`}><option value="all">Todas las categorías</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><label><span className="sr-only">Filtrar por estado</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={`${inputClass} h-11 border-transparent bg-[#F7FAFD] focus:bg-white`}><option value="all">Todos los estados</option><option value="draft">Borradores</option><option value="published">Publicados</option><option value="retired">Retirados</option><option value="archived">Archivados</option></select></label></div><div className="mt-3 flex items-center justify-between border-t border-[#EAF1F7] pt-3 text-xs text-[#71879A]"><span>{visiblePlans.length} {visiblePlans.length === 1 ? "plan" : "planes"}{categoryFilter !== "all" || statusFilter !== "all" || search ? " encontrados" : " en el catálogo"}</span>{(categoryFilter !== "all" || statusFilter !== "all" || search) && <button type="button" onClick={() => { setSearch(""); setCategoryFilter("all"); setStatusFilter("all"); }} className="font-semibold text-[#246FC1] hover:text-[#174F8A]">Limpiar filtros</button>}</div></section>
 
@@ -122,6 +165,8 @@ export function AdminPlansPage() {
             categoryName={categories.find((category) => category.id === plan.category)?.name}
             onDuplicate={(item) => duplicatePlan.mutate(item)}
             onPublish={(item) => updateLifecycle.mutate({ plan: item, action: "publish" })}
+            onApproveProposal={(item) => { if (window.confirm(`¿Confirmas aprobación comercial de “${item.name}”? Esto no valida IVA ni capacidades técnicas.`)) approveProposal.mutate(item); }}
+            onValidateTax={(item, note) => validateTax.mutate({ plan: item, note })}
             onCreateVersion={(item) => newVersion.mutate(item)}
             onRetire={(item) => updateLifecycle.mutate({ plan: item, action: "retire" })}
             onArchive={(item) => { if (window.confirm(`¿Archivar “${item.name}”? Se conservarán sus suscripciones e historial.`)) updateLifecycle.mutate({ plan: item, action: "archive" }); }}

@@ -39,6 +39,7 @@ export interface Tenant {
 export interface Plan {
   id: number;
   code: string;
+  slug: string | null;
   name: string;
   description: string;
   short_description: string;
@@ -54,24 +55,56 @@ export interface Plan {
   yearly_price: string | null;
   monthly_certificate_fee: string;
   quote_only: boolean;
-  annual_document_quota: number;
-  max_users: number;
-  accountant_users: number;
+  annual_document_quota: number | null;
+  max_users: number | null;
+  accountant_users: number | null;
   max_issuers: number;
-  max_branches: number;
-  max_documents_per_month: number;
-  max_employees: number;
+  max_branches: number | null;
+  max_documents_per_month: number | null;
+  max_employees: number | null;
   requires_base_plan: boolean;
   certificate_included_annual: boolean;
   support_level: "standard" | "priority" | "custom";
   has_inventory: boolean;
   has_cash_register: boolean;
   has_api_access: boolean;
+  commercial_status: "legacy" | "proposal" | "approved";
+  tax_validation_status: "unknown" | "pending" | "validated";
+  tax_validation_note: string;
+  quotation_scope: Record<string, string | number | boolean>;
+  validated_capabilities: { code: string; name: string; level: string }[];
+  plan_capabilities: { id: number; scope_level: string; included_in_proposal: boolean; capability: { code: string; name: string; validation_status: "pending" | "available" | "unavailable" } }[];
   is_active: boolean;
   parent_plan: number | null;
   version_number: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface PlanBundle {
+  id: number;
+  slug: string;
+  name: string;
+  short_description: string;
+  billing_plan: number;
+  payroll_plan: number;
+  billing_plan_details: Plan;
+  payroll_plan_details: Plan;
+  monthly_price: string;
+  yearly_price: string;
+  display_order: number;
+  commercial_status: "proposal" | "approved";
+  is_active: boolean;
+}
+
+export interface Capability {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  validation_status: "pending" | "available" | "unavailable";
+  validation_notes: string;
+  reviewed_at: string | null;
 }
 
 export interface PlanCategory {
