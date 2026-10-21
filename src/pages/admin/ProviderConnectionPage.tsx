@@ -10,7 +10,7 @@ import type { MatiasCatalogData, MatiasConnection } from "@/types";
 
 const defaultUrls = {
   sandbox: "https://sandbox-api.matias-api.com/api/ubl2.1",
-  production: "",
+  production: "https://api.matias-api.com/api/ubl2.1",
 };
 
 const defaultTokenEndpoints = {
@@ -172,7 +172,7 @@ export function ProviderConnectionPage() {
     setForm({
       enabled: connection.enabled,
       environment: connection.environment,
-      base_url: connection.base_url,
+      base_url: connection.base_url || connection.default_base_url || defaultUrls[connection.environment],
       timeout_seconds: connection.timeout_seconds,
       retry_attempts: connection.retry_attempts,
       token_generation_endpoint: connection.token_generation_endpoint || defaultTokenEndpoints[connection.environment],
@@ -328,7 +328,7 @@ export function ProviderConnectionPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Integración activa"><button type="button" onClick={() => setForm((c) => ({ ...c, enabled: !c.enabled }))} className={cn("flex h-11 w-full items-center justify-between rounded-xl border px-3 text-sm font-bold", form.enabled ? "border-[#178C68] bg-[#D8F5EB] text-[#178C68]" : "border-[#D9ECFA] bg-[#F8FCFF] text-[#6C8398]")}><span>{form.enabled ? "Activa" : "Desactivada"}</span><span className={cn("h-6 w-11 rounded-full p-1 transition", form.enabled ? "bg-[#178C68]" : "bg-[#B8CBDC]")}><span className={cn("block h-4 w-4 rounded-full bg-white transition", form.enabled && "translate-x-5")} /></span></button></Field>
               <Field label="Ambiente"><div className="grid grid-cols-2 gap-2"><button onClick={() => changeEnvironment("sandbox")} className={cn("rounded-xl border p-3 text-left text-sm font-semibold text-[#102F4B]", form.environment === "sandbox" ? "border-[#4F9FF0] bg-[#E8F0FE] text-[#246FC1]" : "border-[#D9ECFA] bg-white hover:bg-[#F8FCFF]")}>Sandbox<p className="mt-1 text-xs font-normal text-[#6C8398]">No envía documentos reales.</p></button><button onClick={() => changeEnvironment("production")} className={cn("rounded-xl border p-3 text-left text-sm font-semibold text-[#102F4B]", form.environment === "production" ? "border-[#C94455] bg-[#FDE8E8] text-[#C94455]" : "border-[#D9ECFA] bg-white hover:bg-[#F8FCFF]")}>Producción<p className="mt-1 text-xs font-normal text-[#6C8398]">Tiene efectos reales.</p></button></div></Field>
-              <Field label={form.environment === "sandbox" ? "URL oficial de Sandbox" : "URL productiva entregada por MATIAS"}><input value={form.base_url} readOnly={form.environment === "sandbox"} onChange={(e) => setForm((c) => ({ ...c, base_url: e.target.value }))} placeholder={form.environment === "production" ? "https://… (solicítala a MATIAS)" : undefined} className={cn(inputClass, form.environment === "sandbox" && "bg-[#F8FCFF]")} /><p className="text-xs text-[#6C8398]">{form.environment === "sandbox" ? "Fija según la documentación oficial; las credenciales son independientes de Producción." : "No uses una URL de ejemplo. MATIAS debe proporcionar el endpoint de tu cuenta productiva."}</p></Field>
+              <Field label={form.environment === "sandbox" ? "URL oficial de Sandbox" : "URL oficial de Producción"}><input value={form.base_url} readOnly={form.environment === "sandbox"} onChange={(e) => setForm((c) => ({ ...c, base_url: e.target.value }))} placeholder={form.environment === "production" ? "https://api.matias-api.com/api/ubl2.1" : undefined} className={cn(inputClass, form.environment === "sandbox" && "bg-[#F8FCFF]")} /><p className="text-xs text-[#6C8398]">{form.environment === "sandbox" ? "Fija según la documentación oficial; las credenciales son independientes de Producción." : "La documentación oficial muestra https://api.matias-api.com/api/ubl2.1 como ejemplo. Usa una URL distinta solo si MATIAS la asignó a tu cuenta."}</p></Field>
               <div className="flex items-end">{form.environment === "sandbox" && <button onClick={() => setForm((c) => ({ ...c, base_url: defaultUrls[c.environment] }))} className="h-11 rounded-xl border border-[#D9ECFA] px-4 text-sm font-semibold text-[#39566F] hover:bg-[#F8FCFF]"><RotateCcw size={15} className="mr-2 inline" />Restablecer URL oficial</button>}</div>
               <Field label="Tiempo máximo de espera (segundos)"><input type="number" min={5} max={120} value={form.timeout_seconds} onChange={(e) => setForm((c) => ({ ...c, timeout_seconds: Number(e.target.value) }))} className={inputClass} /><p className="text-xs text-[#6C8398]">Tiempo límite de cada petición a MATIAS. Ejemplo: 20 segundos.</p></Field>
             </div>
