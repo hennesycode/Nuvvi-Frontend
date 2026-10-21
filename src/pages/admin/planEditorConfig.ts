@@ -21,19 +21,6 @@ export const blankPlanDraft: PlanDraft = {
   has_cash_register: true, has_api_access: false, is_active: false,
 };
 
-export type PlanTemplateId = "blank" | "nuvvi-inicio" | "nuvvi-negocio" | "nuvvi-crecimiento" | "payroll-initial" | "payroll-business" | "payroll-plus" | "enterprise";
-
-export const planTemplateNames: Record<PlanTemplateId, string> = {
-  blank: "Desde cero",
-  "nuvvi-inicio": "NUVVI Inicio",
-  "nuvvi-negocio": "NUVVI Negocio",
-  "nuvvi-crecimiento": "NUVVI Crecimiento",
-  "payroll-initial": "Nómina Inicial",
-  "payroll-business": "Nómina Negocio",
-  "payroll-plus": "Nómina Plus",
-  enterprise: "Plan personalizado",
-};
-
 const invoicingBenefits = [
   ["Facturación electrónica", "Emite documentos electrónicos para tu operación."],
   ["Notas crédito y débito", "Gestiona ajustes a los documentos emitidos."],

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Circle, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Plan, PlanCategory } from "@/types";
-import { blankPlanDraft, generatedPlanBenefits, planTemplateNames, type PlanDraft, type PlanTemplateId } from "./planEditorConfig";
+import { blankPlanDraft, generatedPlanBenefits, type PlanDraft } from "./planEditorConfig";
 
 type Step = 0 | 1 | 2 | 3;
 type SaveMode = "draft" | "publish";
@@ -70,38 +70,43 @@ function applyProductDefaults(current: PlanDraft, type: PlanDraft["plan_type"], 
   };
 }
 
-function applyTemplate(id: PlanTemplateId, categories: PlanCategory[], plans: Plan[]): PlanDraft {
-  if (id === "blank") return { ...blankPlanDraft, code: "", category: null };
-  const templates: Partial<Record<PlanTemplateId, Partial<PlanDraft>>> = {
-    "nuvvi-inicio": {
-      name: "NUVVI Inicio", short_description: "Factura electrónicamente y organiza tu operación desde cualquier lugar.",
-      description: "Ideal para emprendedores y profesionales independientes que desean administrar sus ventas, inventarios, caja y facturación electrónica desde un solo lugar.",
-      monthly_price: "24900", yearly_price: "219000", max_documents_per_month: 10, annual_document_quota: 120,
-      max_users: 1, accountant_users: 1, max_branches: 1, support_level: "standard",
-    },
-    "nuvvi-negocio": {
-      name: "NUVVI Negocio", short_description: "Más documentos, más usuarios y mejor control de tu negocio.",
-      description: "Ideal para negocios y pequeñas empresas que necesitan gestionar facturación, inventarios, caja y operaciones comerciales desde una plataforma centralizada.",
-      monthly_price: "39900", yearly_price: "359000", max_documents_per_month: 50, annual_document_quota: 600,
-      max_users: 3, accountant_users: 1, max_branches: 1, support_level: "standard", commercial_badge: "Recomendado",
-    },
-    "nuvvi-crecimiento": {
-      name: "NUVVI Crecimiento", short_description: "Más capacidad y control para empresas en crecimiento.",
-      description: "Diseñado para empresas en crecimiento que necesitan mayor capacidad de facturación, varios usuarios y control de sus operaciones comerciales.",
-      monthly_price: "59900", yearly_price: "539000", max_documents_per_month: 100, annual_document_quota: 1200,
-      max_users: 5, accountant_users: 1, max_branches: 2, support_level: "priority",
-    },
-    "payroll-initial": { name: "Nómina Inicial", short_description: "Transmite nómina electrónica para equipos pequeños.", monthly_price: "9900", yearly_price: "89000", max_employees: 2, max_documents_per_month: 2, annual_document_quota: 24 },
-    "payroll-business": { name: "Nómina Negocio", short_description: "Nómina electrónica para equipos en crecimiento.", monthly_price: "14900", yearly_price: "134000", max_employees: 10, max_documents_per_month: 10, annual_document_quota: 120 },
-    "payroll-plus": { name: "Nómina Plus", short_description: "Más capacidad de transmisión para equipos amplios.", monthly_price: "29900", yearly_price: "269000", max_employees: 25, max_documents_per_month: 25, annual_document_quota: 300 },
-    enterprise: { name: "NUVVI Empresarial", short_description: "Una solución configurada según las necesidades de tu empresa.", description: "Volumen, usuarios, sucursales, funciones y soporte según propuesta comercial." },
+function draftFromPlan(plan: Plan, plans: Plan[]): PlanDraft {
+  const name = `${plan.name} (copia)`;
+  return {
+    name,
+    code: uniqueCode(name, plans),
+    short_description: plan.short_description,
+    description: plan.description,
+    target_audience: plan.target_audience,
+    commercial_badge: plan.commercial_badge,
+    display_order: plan.display_order,
+    catalog_status: "draft",
+    visibility: "private",
+    plan_type: plan.plan_type,
+    monthly_price: plan.monthly_price ?? "",
+    yearly_price: plan.yearly_price ?? "",
+    monthly_certificate_fee: plan.monthly_certificate_fee,
+    quote_only: plan.quote_only,
+    annual_document_quota: plan.annual_document_quota,
+    category: plan.category,
+    features: plan.features.map((section) => ({
+      ...section,
+      items: section.items.map((item) => ({ ...item })),
+    })),
+    max_users: plan.max_users,
+    accountant_users: plan.accountant_users,
+    max_issuers: plan.max_issuers,
+    max_branches: plan.max_branches,
+    max_documents_per_month: plan.max_documents_per_month,
+    max_employees: plan.max_employees,
+    requires_base_plan: plan.requires_base_plan,
+    certificate_included_annual: plan.certificate_included_annual,
+    support_level: plan.support_level,
+    has_inventory: plan.has_inventory,
+    has_cash_register: plan.has_cash_register,
+    has_api_access: plan.has_api_access,
+    is_active: false,
   };
-  const payroll = id.startsWith("payroll-");
-  const type = payroll ? "payroll_addon" : id === "enterprise" ? "enterprise" : "invoicing";
-  const base = applyProductDefaults({ ...blankPlanDraft, ...templates[id] }, type, categories);
-  base.code = uniqueCode(base.name, plans);
-  base.features = generatedPlanBenefits(base);
-  return base;
 }
 
 function setItemAt(sections: FeatureSection[], sectionIndex: number, items: FeatureSection["items"]) {
@@ -110,7 +115,7 @@ function setItemAt(sections: FeatureSection[], sectionIndex: number, items: Feat
 
 export function PlanEditorDialog({ form, setForm, editing, plans, categories, saving, onSave, onClose }: PlanEditorDialogProps) {
   const [step, setStep] = useState<Step>(0);
-  const [template, setTemplate] = useState<PlanTemplateId>("blank");
+  const [template, setTemplate] = useState("blank");
   const [customizeBenefits, setCustomizeBenefits] = useState(Boolean(editing?.features?.length));
   const [codeTouched, setCodeTouched] = useState(false);
   const autoBenefits = useMemo(() => generatedPlanBenefits(form), [form]);
@@ -121,9 +126,14 @@ export function PlanEditorDialog({ form, setForm, editing, plans, categories, sa
   const annualDiscount = annualBase > 0 && annualPrice > 0 ? (1 - annualPrice / annualBase) * 100 : 0;
   const quote = form.quote_only || form.plan_type === "enterprise";
 
-  function chooseTemplate(id: PlanTemplateId) {
-    setTemplate(id);
-    setForm(applyTemplate(id, categories, plans));
+  function chooseTemplate(value: string) {
+    setTemplate(value);
+    if (value === "blank") {
+      setForm({ ...blankPlanDraft, code: "", category: null });
+    } else {
+      const source = plans.find((plan) => String(plan.id) === value);
+      if (source) setForm(draftFromPlan(source, plans));
+    }
     setCustomizeBenefits(false);
     setCodeTouched(false);
   }
@@ -153,7 +163,7 @@ export function PlanEditorDialog({ form, setForm, editing, plans, categories, sa
 
   function renderInformationStep() {
     return <div className="space-y-5">
-      {!editing && <label className="block max-w-md space-y-1.5"><span className="text-xs font-bold text-[#39566F]">Crear desde plantilla</span><select value={template} onChange={(event) => chooseTemplate(event.target.value as PlanTemplateId)} className={inputClass}>{Object.entries(planTemplateNames).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><span className="block text-xs text-[#71879A]">La plantilla solo precarga el formulario; no crea ni publica el plan.</span></label>}
+      {!editing && <label className="block max-w-md space-y-1.5"><span className="text-xs font-bold text-[#39566F]">Crear desde</span><select value={template} onChange={(event) => chooseTemplate(event.target.value)} className={inputClass}><option value="blank">Desde cero</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} · {plan.catalog_status === "draft" ? "Borrador" : plan.catalog_status === "published" ? "Publicado" : plan.catalog_status === "retired" ? "Retirado" : "Archivado"}</option>)}</select>{plans.length > 0 && <span className="block text-xs text-[#71879A]">Puedes usar un plan existente como base; se abrirá una copia nueva en borrador.</span>}</label>}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="space-y-1.5"><span className="text-xs font-bold text-[#39566F]">Nombre del plan *</span><input autoFocus required maxLength={255} value={form.name} onChange={(event) => changeName(event.target.value)} placeholder="Ej. NUVVI Negocio" className={inputClass} /></label>
         <label className="space-y-1.5"><span className="text-xs font-bold text-[#39566F]">Tipo de producto *</span><select value={form.plan_type} onChange={(event) => chooseType(event.target.value as PlanDraft["plan_type"])} className={inputClass}><option value="invoicing">Facturación electrónica</option><option value="payroll_addon">Complemento de nómina</option><option value="enterprise">Empresarial / cotización</option></select></label>
