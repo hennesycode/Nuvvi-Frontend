@@ -92,6 +92,7 @@ export interface PlanBundle {
   payroll_plan_details: Plan;
   monthly_price: string;
   yearly_price: string;
+  discount_percent: number;
   display_order: number;
   commercial_status: "proposal" | "approved";
   is_active: boolean;
