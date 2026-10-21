@@ -66,7 +66,7 @@ export function AdminPlansPage() {
   });
   const open = (value: NonNullable<typeof editor>) => { setErrors({}); setEditor(value); };
   const query = tab === "bundles" ? bundlesQuery : plansQuery;
-  return <main className="plan-catalog mx-auto w-full max-w-[1440px] space-y-6 pb-8 text-foreground">
+  return <main className="plan-catalog w-full min-w-0 space-y-6 pb-8 text-foreground">
     <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-[30px] font-semibold tracking-tight">Planes y precios</h1><p className="mt-1 text-sm text-muted-foreground">Crea y administra los planes publicados de NUVVI</p></div><Button onClick={() => open({ category: tab })} className="bg-[#246FC1] text-white shadow-none hover:bg-[#1b5fa8]"><Plus size={18} className="mr-2"/>Crear plan</Button></header>
     <CatalogTabs tab={tab} counts={counts} onChange={setTab}/>
     <section id="plan-catalog-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={0} className="space-y-4">
