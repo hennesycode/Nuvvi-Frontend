@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Building2, CheckCircle2, Eye, FileCheck2, Loader2, Pencil, Power, PowerOff, RefreshCw, Search, Settings, Trash2, X } from "lucide-react";
+import { BarChart3, Building2, CheckCircle2, CircleHelp, Eye, FileCheck2, Loader2, Pencil, Power, PowerOff, RefreshCw, Search, Settings, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,11 @@ function getApiErrorMessage(error: any, fallback: string) {
   const data = error?.response?.data;
   if (!data) return fallback;
   if (typeof data.detail === "string") return data.detail;
+  if (typeof data.message === "string") return data.message;
+  if (data.errors && typeof data.errors === "object") {
+    const firstError = Object.values(data.errors).flat()[0];
+    if (typeof firstError === "string") return firstError;
+  }
   const key = Object.keys(data)[0];
   const message = key ? data[key] : null;
   if (Array.isArray(message)) return message[0];
@@ -116,10 +121,37 @@ function ColombiaFlag() {
   return <span className="block h-4 w-6 overflow-hidden rounded-[3px] border border-[#D9ECFA] shadow-sm" aria-label="Bandera de Colombia"><span className="block h-1/2 bg-[#FCD116]" /><span className="block h-1/4 bg-[#003893]" /><span className="block h-1/4 bg-[#CE1126]" /></span>;
 }
 
-function Field({ label, hint, error, required = false, children }: { label: string; hint?: string; error?: string; required?: boolean; children: React.ReactNode }) {
+const fieldHelp: Record<string, string> = {
+  "Razón social": "Nombre legal registrado de la empresa, tal como aparece en sus documentos tributarios.",
+  "Tipo de identificación": "Selecciona el documento fiscal que corresponde a la empresa o persona.",
+  "Identificación": "Escribe el número de NIT o documento sin puntos, espacios ni dígito de verificación.",
+  "Identificación (NIT)": "Escribe el número de NIT o documento sin puntos, espacios ni dígito de verificación.",
+  "Dígito de verificación": "Se calcula automáticamente a partir del NIT cuando el tipo de documento lo requiere.",
+  "Tipo de contribuyente": "Elige la clasificación tributaria que corresponde a la empresa.",
+  "Régimen contable": "Selecciona el régimen contable registrado para la empresa.",
+  "Responsabilidad fiscal": "Selecciona la responsabilidad fiscal aplicable según el registro tributario.",
+  País: "Selecciona el país de domicilio fiscal de la empresa.",
+  Departamento: "Selecciona el departamento donde está ubicada la empresa.",
+  Ciudad: "Selecciona la ciudad correspondiente al departamento elegido.",
+  Dirección: "Ingresa la dirección física principal de la empresa, incluyendo nomenclatura.",
+  Celular: "Número móvil de contacto con indicativo internacional +57 y 10 dígitos.",
+  "Teléfono fijo o alternativo": "Teléfono de contacto adicional con indicativo +57 y 10 dígitos.",
+  "Nombres del responsable": "Nombres de la persona responsable de la cuenta de esta empresa.",
+  "Apellidos del responsable": "Apellidos de la persona responsable de la cuenta de esta empresa.",
+  "Correo de acceso": "Correo principal para notificaciones y acceso de la empresa.",
+  "Correo de contacto": "Correo principal para notificaciones y contacto de la empresa.",
+  "Teléfono alternativo": "Número adicional de contacto con indicativo internacional +57.",
+  "Ejecutivo asignado": "Persona del equipo NUVVI encargada de acompañar a esta empresa.",
+  "Notas internas": "Observaciones de uso interno; no se envían al proveedor ni aparecen en documentos.",
+  Clave: "Nombre del parámetro de configuración que deseas actualizar.",
+  Valor: "Nuevo valor que se guardará para el parámetro seleccionado.",
+};
+
+function Field({ label, hint, error, help, required = false, children }: { label: string; hint?: string; error?: string; help?: string; required?: boolean; children: React.ReactNode }) {
+  const tooltip = help || fieldHelp[label] || hint;
   return (
     <label className="space-y-1.5">
-      <span className="text-xs font-semibold text-[#39566F]">{label}{required && <> <span className="text-[#C94455]" aria-hidden="true">*</span><span className="sr-only"> obligatorio</span></>}</span>
+      <span className="flex items-center gap-1.5 text-xs font-semibold text-[#39566F]">{label}{required && <> <span className="text-[#C94455]" aria-hidden="true">*</span><span className="sr-only"> obligatorio</span></>}{tooltip && <span className="group/help relative inline-flex"><button type="button" aria-label={`Ayuda: ${label}`} className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#7890A5] transition-colors hover:text-[#246FC1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F9FF0]"><CircleHelp size={14} /></button><span role="tooltip" className="pointer-events-none absolute left-0 top-full z-[80] mt-2 w-56 translate-y-1 rounded-xl border border-[#D9ECFA] bg-white px-3 py-2 text-left text-xs font-medium leading-relaxed text-[#39566F] opacity-0 shadow-[0_10px_28px_rgba(16,47,75,0.18)] transition-all duration-150 group-hover/help:translate-y-0 group-hover/help:opacity-100 group-focus-within/help:translate-y-0 group-focus-within/help:opacity-100">{tooltip}</span></span>}</span>
       {children}
       {hint && !error ? <p className="text-[11px] font-medium text-[#6C8398]">{hint}</p> : null}
       {error ? <p className="text-[11px] font-semibold text-[#C94455]">{error}</p> : null}
@@ -509,6 +541,13 @@ function EditModal({ company, catalogs, onClose, onSave, busy }: { company: Comp
   const accountingName = optionName(accounting);
   const fiscalCode = optionCode(fiscal);
   const fiscalName = optionName(fiscal);
+  useEffect(() => {
+    const documentAbbreviation = String(identity?.abbreviation || "").toUpperCase();
+    const documentCode = String(identity?.code || "");
+    const applies = ["NIT", "CC"].includes(documentAbbreviation) || ["31", "13"].includes(documentCode);
+    const calculatedDigit = applies ? calculateNitDv(form.nit) : "";
+    setForm((current) => current.verification_digit === calculatedDigit ? current : { ...current, verification_digit: calculatedDigit });
+  }, [form.nit, identity?.abbreviation, identity?.code]);
   const validIdentity = !!identity && /^\d{5,15}$/.test(form.nit);
   const validBusiness = form.company_name.trim().length >= 3 && validIdentity && !!organization && !!accounting && !!fiscal && !!form.country_id && !!department && !!city && form.address.trim().length >= 5;
   const validContact = form.owner_first_name.trim().length >= 2 && form.owner_last_name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && /^\+57\d{10}$/.test(form.mobile) && /^\+57\d{10}$/.test(form.phone);
