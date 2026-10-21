@@ -49,9 +49,9 @@ export interface Plan {
   visibility: "public" | "private" | "link" | "quote";
   plan_type: "invoicing" | "payroll_addon" | "enterprise";
   category: number | null;
-  features: { title: string; items: { title: string; description: string }[] }[];
-  monthly_price: string;
-  yearly_price: string;
+  features: { title: string; items: { title: string; description: string; is_visible?: boolean }[] }[];
+  monthly_price: string | null;
+  yearly_price: string | null;
   monthly_certificate_fee: string;
   quote_only: boolean;
   annual_document_quota: number;
@@ -68,6 +68,8 @@ export interface Plan {
   has_cash_register: boolean;
   has_api_access: boolean;
   is_active: boolean;
+  parent_plan: number | null;
+  version_number: number;
   created_at: string;
   updated_at: string;
 }
