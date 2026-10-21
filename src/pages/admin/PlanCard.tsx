@@ -1,142 +1,56 @@
-import { Building2, Check, Copy, FileText, MoreHorizontal, Pencil, UsersRound } from "lucide-react";
-import type { Plan } from "@/types";
+import { Check, Minus, Pencil, FileText, UsersRound, UserRoundCheck } from "lucide-react";
+import type { Plan, PlanBundle } from "@/types";
 import { Button } from "@/components/ui/button";
+import { annualSaving, bundleFeatures, bundleTotals, isExclusion, money, percent } from "./planPresentation";
 
-interface PlanCardProps {
-  plan: Plan;
-  categoryName?: string;
-  onDuplicate: (plan: Plan) => void;
-  onPublish: (plan: Plan) => void;
-  onApproveProposal: (plan: Plan) => void;
-  onValidateTax: (plan: Plan, note: string) => void;
-  onCreateVersion: (plan: Plan) => void;
-  onRetire: (plan: Plan) => void;
-  onArchive: (plan: Plan) => void;
-  onDelete: (plan: Plan) => void;
-  onEdit: (plan: Plan) => void;
+export function PriceBlock({ monthly, annual, quote = false }: { monthly: string | number | null; annual: string | number | null; quote?: boolean }) {
+  const saving = annualSaving(monthly, annual);
+  if (quote) return <div className="rounded-xl bg-muted p-4"><p className="text-xl font-semibold">Por cotización</p><p className="mt-2 text-sm text-muted-foreground">Límites y condiciones según cotización</p></div>;
+  return <div className="space-y-3 border-y py-4 tabular-nums">
+    <div><p className="text-sm text-muted-foreground">Pago mensual</p><p><strong className="text-3xl font-semibold tracking-tight">{money(monthly)}</strong> <span className="text-sm text-muted-foreground">/ mes</span></p></div>
+    <div><p className="text-sm text-muted-foreground">Pago anual</p><p><strong className="text-3xl font-semibold tracking-tight">{money(annual)}</strong> <span className="text-sm text-muted-foreground">/ año</span></p></div>
+    {saving && <p className="text-sm font-medium text-emerald-800">Ahorras {money(saving.amount)} al año · {percent(saving.percent)} %</p>}
+  </div>;
 }
 
-function money(value: string | null) {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
+export function LimitsSummary({ plan }: { plan: Plan }) {
+  const payroll = plan.plan_type === "payroll_addon";
+  const rows = [
+    { value: plan.annual_document_quota, label: `documentos de ${payroll ? "nómina" : "facturación"} al año`, icon: FileText },
+    { value: plan.max_documents_per_month, label: "documentos al mes", icon: FileText },
+    ...(payroll ? [{ value: plan.max_employees, label: plan.max_employees === 1 ? "empleado incluido" : "empleados incluidos", icon: UsersRound }] : []),
+    { value: plan.max_users, label: plan.max_users === 1 ? "usuario administrativo" : "usuarios administrativos", icon: UsersRound },
+  ];
+  return <ul className="space-y-2 text-sm">{rows.filter(row => row.value !== null).map(row => <li key={row.label} className="flex items-start gap-2"><row.icon size={18} className="mt-0.5 shrink-0 text-muted-foreground"/><span><b className="tabular-nums">{row.value?.toLocaleString("es-CO")}</b> {row.label}</span></li>)}
+    {plan.accountant_users !== null && <li className="flex gap-2"><UserRoundCheck size={18} className="shrink-0 text-muted-foreground"/><span>Acceso del contador: <b>{plan.accountant_users > 0 ? "Incluido" : "No incluido"}</b></span></li>}
+  </ul>;
 }
 
-export function PlanCard({
-  plan,
-  categoryName,
-  onDuplicate,
-  onPublish,
-  onApproveProposal,
-  onValidateTax,
-  onCreateVersion,
-  onRetire,
-  onArchive,
-  onDelete,
-  onEdit,
-}: PlanCardProps) {
-  const published = plan.catalog_status === "published";
-  const statusLabel = {
-    draft: "Borrador",
-    published: "Publicado",
-    retired: "Retirado",
-    archived: "Archivado",
-  }[plan.catalog_status];
-  const visibleFeatures = plan.features
-    ?.flatMap((section) => section.items)
-    .filter((feature) => feature.is_visible !== false) ?? [];
-  const Icon = plan.plan_type === "payroll_addon"
-    ? UsersRound
-    : plan.plan_type === "enterprise"
-      ? Building2
-      : FileText;
-
-  return (
-    <article className={`group flex min-h-[370px] flex-col overflow-hidden rounded-2xl border bg-white transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(16,47,75,0.08)] ${
-      plan.commercial_badge
-        ? "border-[#79B7EC] shadow-[0_4px_16px_rgba(79,159,240,0.09)]"
-        : "border-[#D9ECFA]"
-    }`}>
-      {plan.commercial_badge && <div className="h-1 bg-[#4F9FF0]" />}
-
-      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF4FD] text-[#246FC1]">
-            <Icon size={19} strokeWidth={1.8} />
-          </span>
-          <div className="min-w-0">
-            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-              <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${published ? "bg-[#E7F5EF] text-[#178C68]" : "bg-[#F1F6FA] text-[#647D92]"}`}>
-                {statusLabel}
-              </span>
-              {plan.commercial_status === "proposal" && <span className="rounded-md bg-[#FFF4DB] px-2 py-1 text-[10px] font-bold text-[#8C6718]">Propuesta · IVA pendiente</span>}
-              {plan.version_number > 1 && <span className="rounded-md bg-[#F1F6FA] px-2 py-1 text-[10px] font-bold text-[#647D92]">Versión {plan.version_number}</span>}
-            </div>
-            <h2 className="truncate text-lg font-extrabold tracking-[-0.02em] text-[#102F4B]">{plan.name}</h2>
-            <p className="mt-0.5 truncate text-xs text-[#8296A8]">{categoryName || (plan.plan_type === "payroll_addon" ? "Nómina electrónica" : plan.plan_type === "enterprise" ? "Empresarial" : "Facturación electrónica")}</p>
-          </div>
-        </div>
-
-        <details className="relative shrink-0">
-          <summary aria-label={`Acciones de ${plan.name}`} className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg text-[#70869A] transition hover:bg-[#F1F6FA] hover:text-[#246FC1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F9FF0]">
-            <MoreHorizontal size={18} />
-          </summary>
-          <div className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-[#D9ECFA] bg-white p-1.5 shadow-[0_12px_32px_rgba(16,47,75,0.14)]">
-            <Action onClick={() => onDuplicate(plan)} icon={<Copy size={14} />}>Duplicar plan</Action>
-            {plan.catalog_status === "draft" && <Action onClick={() => onEdit(plan)} icon={<Pencil size={14} />}>Editar borrador</Action>}
-            {plan.catalog_status === "draft" && plan.commercial_status === "legacy" && <Action onClick={() => onPublish(plan)}>Publicar oferta anterior</Action>}
-            {plan.catalog_status === "draft" && plan.commercial_status === "proposal" && <Action onClick={() => onApproveProposal(plan)}>Aprobar propuesta comercial</Action>}
-            {plan.catalog_status === "draft" && plan.commercial_status === "proposal" && <Action onClick={() => { const note = window.prompt("Confirma la revisión tributaria e ingresa su referencia:"); if (note?.trim()) onValidateTax(plan, note.trim()); }}>Registrar validación tributaria</Action>}
-            {plan.catalog_status === "draft" && plan.commercial_status === "approved" && plan.tax_validation_status === "validated" && <Action onClick={() => onPublish(plan)}>Publicar propuesta aprobada</Action>}
-            {published && <Action onClick={() => onCreateVersion(plan)}>Crear versión</Action>}
-            {published && <Action onClick={() => onRetire(plan)}>Retirar</Action>}
-            {plan.catalog_status !== "archived" && <Action onClick={() => onArchive(plan)}>Archivar</Action>}
-            {plan.catalog_status !== "published" && <Action destructive onClick={() => onDelete(plan)}>Eliminar</Action>}
-          </div>
-        </details>
-      </div>
-
-      <div className="px-5">
-        <p className="min-h-10 text-sm leading-5 text-[#647D92]">{plan.short_description || plan.description || "Sin descripción del plan."}</p>
-        <div className="mt-4 flex items-end justify-between gap-3 border-y border-[#EAF1F7] py-3.5">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8296A8]">{plan.quote_only ? "Modalidad" : "Desde"}</p>
-            <p className="mt-0.5 text-[26px] font-extrabold leading-none tracking-[-0.04em] tabular-nums text-[#102F4B]">{plan.quote_only ? "Cotización" : money(plan.monthly_price)}</p>
-          </div>
-          {!plan.quote_only && <span className="pb-0.5 text-xs text-[#8296A8]">/ mes</span>}
-          {!plan.quote_only && Number(plan.yearly_price) > 0 && <div className="pb-0.5 text-right"><p className="text-[10px] font-semibold text-[#8296A8]">ANUAL</p><p className="text-sm font-bold tabular-nums text-[#39566F]">{money(plan.yearly_price)}</p></div>}
-        </div>
-      </div>
-
-      <div className="flex-1 px-5 py-4">
-        <div className="space-y-2.5">
-          {visibleFeatures.slice(0, 4).map((feature, index) => (
-            <div key={`${feature.title}-${index}`} className="flex items-start gap-2.5 text-sm text-[#39566F]">
-              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#E7F5EF] text-[#178C68]"><Check size={11} strokeWidth={2.5} /></span>
-              <span className="line-clamp-1">{feature.title}</span>
-            </div>
-          ))}
-          {visibleFeatures.length > 4 && <p className="pl-6 text-xs font-semibold text-[#246FC1]">+ {visibleFeatures.length - 4} beneficios más</p>}
-          {visibleFeatures.length === 0 && <p className="text-xs text-[#8296A8]">Beneficios por configurar</p>}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3 border-t border-[#EAF1F7] bg-[#FBFDFF] px-5 py-3.5">
-        <div className="flex min-w-0 items-center gap-3 text-xs text-[#647D92]">
-          <span className="whitespace-nowrap">{plan.plan_type === "enterprise" ? "Alcance por propuesta" : plan.plan_type === "payroll_addon" ? `${plan.max_employees ?? 0} empleados` : `${plan.max_users ?? 0} usuarios`}</span>
-          <span className="h-3.5 w-px bg-[#D9E5EF]" />
-          <span className="truncate">{plan.plan_type === "enterprise" ? "Por cotización" : plan.annual_document_quota ? `${plan.annual_document_quota.toLocaleString("es-CO")} docs/año` : `${plan.max_documents_per_month ?? 0} docs/mes`}</span>
-        </div>
-        {plan.catalog_status === "draft" && <Button variant="outline" onClick={() => onEdit(plan)} className="h-8 shrink-0 rounded-lg border-[#D9ECFA] px-3 text-xs font-bold text-[#246FC1] hover:bg-[#EAF4FD]">Editar</Button>}
-      </div>
-    </article>
-  );
+export function BenefitsList({ features, requiresBase = false }: { features: Plan["features"]; requiresBase?: boolean }) {
+  const visible = (excluded: boolean) => [...new Map(features.filter(s => isExclusion(s.title) === excluded).flatMap(s => s.items).filter(i => i.is_visible !== false && !(requiresBase && /requiere.*facturaci|requiere.*plan.*activo/i.test(i.title))).map(i => [i.title, i])).values()];
+  const included = visible(false), excluded = visible(true);
+  const list = (items: typeof included, exclusion = false) => <ul className="space-y-2">{items.map((item, i) => <li key={i} className="flex items-start gap-2 text-sm">{exclusion ? <Minus size={18} className="mt-0.5 shrink-0 text-muted-foreground"/> : <Check size={18} className="mt-0.5 shrink-0 text-emerald-800"/>}<span>{item.title}</span></li>)}</ul>;
+  return <div className="space-y-3">{included.length > 0 && <><h3 className="text-sm font-semibold">Qué incluye</h3>{list(included.slice(0, 5))}{included.length > 5 && <details><summary className="cursor-pointer text-sm font-medium text-[#246FC1]">Ver todos los beneficios ({included.length})</summary><div className="pt-3">{list(included.slice(5))}</div></details>}</>}
+    {excluded.length > 0 && <details><summary className="cursor-pointer text-sm font-medium">Qué no incluye ({excluded.length})</summary><div className="pt-3">{list(excluded, true)}</div></details>}
+    {requiresBase && <p className="border-t pt-3 text-sm text-muted-foreground">Requiere un plan de facturación activo.</p>}
+  </div>;
 }
 
-function Action({ children, onClick, icon, destructive = false }: { children: React.ReactNode; onClick: () => void; icon?: React.ReactNode; destructive?: boolean }) {
-  return <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); onClick(); }} className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-semibold transition hover:bg-[#F1F6FA] ${destructive ? "text-[#B54552] hover:bg-[#FFF1F1]" : "text-[#39566F]"}`}>
-    {icon}<span>{children}</span>
-  </button>;
+export function ComboCalculation({ billing, payroll, discount }: { billing?: Plan; payroll?: Plan; discount: number }) {
+  const totals = bundleTotals(billing, payroll, discount);
+  return <div className="space-y-2 text-sm tabular-nums"><p className="font-medium">Descuento del combo: {percent(discount)} %</p>{totals.annual && totals.annual.base > totals.annual.total && <p className="text-emerald-800">Ahorro del combo frente a planes separados: <b>{money(totals.annual.base - totals.annual.total)}</b> por año.</p>}<details><summary className="cursor-pointer text-[#246FC1]">Ver desglose de precios</summary><dl className="mt-3 space-y-2"><div><dt>Mensual por separado → combo</dt><dd>{money(totals.monthly?.base ?? null)} → {money(totals.monthly?.total ?? null)}</dd></div><div><dt>Anual por separado → combo</dt><dd>{money(totals.annual?.base ?? null)} → {money(totals.annual?.total ?? null)}</dd></div><div><dt>Doce mensualidades del combo</dt><dd>{money(totals.monthly ? centsTimesTwelve(totals.monthly.total) : null)}</dd></div></dl></details></div>;
+}
+const centsTimesTwelve = (amount: number) => Math.round(amount * 100) * 12 / 100;
+
+export function PlanCard({ plan, bundle, onEdit }: { plan?: Plan; bundle?: PlanBundle; onEdit: () => void }) {
+  const item = bundle ?? plan!;
+  const quote = item.quote_only || plan?.plan_type === "enterprise";
+  return <article className={`flex min-w-0 flex-col gap-4 rounded-2xl border bg-card p-6 text-card-foreground ${quote ? "plan-quote" : ""}`}>
+    <header><h2 className="text-xl font-semibold">{item.name}</h2>{!(plan?.requires_base_plan && /^requiere.*facturaci/i.test(item.short_description)) && <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.short_description}</p>}{bundle && <p className="mt-2 text-sm font-medium">{bundle.billing_plan_details.name} + {bundle.payroll_plan_details.name}</p>}</header>
+    <PriceBlock monthly={item.monthly_price} annual={item.yearly_price} quote={quote}/>
+    {bundle && !quote && <ComboCalculation billing={bundle.billing_plan_details} payroll={bundle.payroll_plan_details} discount={bundle.discount_percent}/>}
+    <div className="space-y-4">{bundle ? <><div><h3 className="mb-2 text-sm font-semibold">Facturación</h3><LimitsSummary plan={bundle.billing_plan_details}/></div><div><h3 className="mb-2 text-sm font-semibold">Nómina</h3><LimitsSummary plan={bundle.payroll_plan_details}/></div></> : <LimitsSummary plan={plan!}/>}</div>
+    <BenefitsList features={bundle ? bundleFeatures(bundle) : plan!.features} requiresBase={plan?.requires_base_plan}/>
+    <footer className="mt-auto border-t pt-4"><Button variant="outline" className="w-full shadow-none" onClick={onEdit} aria-label={`Editar ${item.name}`}><Pencil size={16} className="mr-2"/>Editar</Button></footer>
+  </article>;
 }

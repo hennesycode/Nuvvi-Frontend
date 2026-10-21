@@ -82,6 +82,8 @@ export interface Plan {
 }
 
 export interface PlanBundle {
+  quote_only: boolean;
+  features: Plan["features"] | null;
   id: number;
   slug: string;
   name: string;
@@ -90,8 +92,8 @@ export interface PlanBundle {
   payroll_plan: number;
   billing_plan_details: Plan;
   payroll_plan_details: Plan;
-  monthly_price: string;
-  yearly_price: string;
+  monthly_price: string | null;
+  yearly_price: string | null;
   discount_percent: number;
   display_order: number;
   commercial_status: "proposal" | "approved";

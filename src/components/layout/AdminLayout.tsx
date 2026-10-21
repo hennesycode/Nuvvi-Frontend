@@ -54,7 +54,7 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
+    <div className="admin-theme flex h-dvh overflow-hidden bg-background text-foreground">
       {/* Sidebar desktop */}
       <aside
         className={cn(
@@ -174,7 +174,7 @@ export function AdminLayout() {
       </AnimatePresence>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         <header className="flex items-center justify-between h-16 px-5 border-b border-[#D9ECFA] bg-white shrink-0">
           <button
             onClick={() => setMobileOpen(true)}
@@ -233,7 +233,7 @@ export function AdminLayout() {
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto bg-[#F8FCFF] p-5 md:p-8">
+        <main className="flex-1 overflow-y-auto bg-background p-4 md:p-8">
           <Outlet />
         </main>
       </div>

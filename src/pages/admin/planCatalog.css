@@ -1,0 +1,9 @@
+.plan-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.plan-catalog { container-type: inline-size; }
+.plan-grid > article { overflow-wrap: anywhere; }
+@container (min-width: 640px) { .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 1020px) { .plan-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 640px) {
+  .plan-grid > .plan-quote { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .plan-quote footer { grid-column: 2; }
+}

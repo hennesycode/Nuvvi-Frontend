@@ -7,11 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        border: "hsla(213, 77%, 63%, 0.15)",
-        input: "hsla(213, 77%, 63%, 0.2)",
-        ring: "hsla(213, 77%, 63%, 0.5)",
-        background: "#0C1E33",
-        foreground: "#ffffff",
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
         nuvvi: {
           DEFAULT: "#579BE9",
           light: "#69AAF0",
@@ -33,14 +33,16 @@ export default {
           dark: "#4A90D9",
         },
         card: {
-          DEFAULT: "rgba(12, 30, 51, 0.8)",
-          border: "rgba(87, 155, 233, 0.12)",
-          hover: "rgba(87, 155, 233, 0.06)",
+          DEFAULT: "var(--card)",
+          foreground: "var(--foreground)",
+          border: "var(--card-border)",
+          hover: "var(--card-hover)",
         },
         muted: {
-          DEFAULT: "#94a3b8",
-          foreground: "#64748b",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
         },
+        popover: { DEFAULT: "var(--card)", foreground: "var(--foreground)" },
         "nuvvi-public": {
           primary: "#4F9FF0",
           "primary-hover": "#348BE3",

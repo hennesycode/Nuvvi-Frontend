@@ -3,6 +3,38 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: #0c1e33;
+    --foreground: #ffffff;
+    --card: rgba(12, 30, 51, .8);
+    --border: hsla(213, 77%, 63%, .15);
+    --card-border: rgba(87, 155, 233, .12);
+    --input: hsla(213, 77%, 63%, .2);
+    --ring: hsla(213, 77%, 63%, .5);
+    --card-hover: rgba(87, 155, 233, .06);
+    --muted: #94a3b8;
+    --muted-foreground: #64748b;
+  }
+
+  .admin-theme {
+    color-scheme: light;
+    --background: #f5f7fa;
+    --foreground: #102f4b;
+    --card: #ffffff;
+    --border: #d7e0e9;
+    --card-border: #8193a5;
+    --input: #8193a5;
+    --ring: #246fc1;
+    --card-hover: #edf3fa;
+    --muted: #edf2f7;
+    --muted-foreground: #526579;
+    color: var(--foreground);
+  }
+
+  .admin-theme :is(button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
   * {
     @apply border-border;
   }
